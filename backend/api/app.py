@@ -1,21 +1,26 @@
 """
 FastAPI Application Configuration and Initialization
-Phase 6c: Authentication & Security with Rate Limiting & DDoS Protection
+Phase 7: Model Loading and Consensus Engine Initialization
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZIPMiddleware
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import os
 import logging
+from typing import AsyncGenerator
+
 from backend.security.rate_limiter import (
     RateLimitMiddleware,
     RequestValidationMiddleware,
     RequestTimeoutMiddleware,
     rate_limiter,
 )
+from backend.models.loader import ModelLoader
+from backend.consensus.engine import ConsensusEngine
 
 # Load environment variables
 load_dotenv()
@@ -24,16 +29,72 @@ load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
+# Global instances - will be populated on startup
+consensus_engine: ConsensusEngine = None
+agents_dict: dict = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator:
+    """
+    Manage app lifecycle: startup and shutdown.
+    
+    Startup:
+    - Load/initialize ML agents
+    - Initialize consensus engine
+    
+    Shutdown:
+    - Clean up resources
+    """
+    # ==================== STARTUP ====================
+    logger.info("🚀 Starting Sentinel-Net Consensus Engine...")
+    
+    try:
+        # Load or initialize agents
+        logger.info("📦 Loading ML agents...")
+        allow_uninitialized = os.getenv("ALLOW_UNINITIALIZED_MODELS", "true").lower() == "true"
+        agents = ModelLoader.load_models(allow_uninitialized=allow_uninitialized)
+        logger.info(f"✓ Loaded {len(agents)} agents")
+        
+        # Count trained vs untrained
+        trained_count = sum(1 for a in agents.values() if a.is_trained)
+        logger.info(f"  - Trained: {trained_count}/{len(agents)}")
+        logger.info(f"  - Untrained: {len(agents) - trained_count}/{len(agents)}")
+        
+        # Initialize consensus engine
+        logger.info("🧠 Initializing consensus engine...")
+        global consensus_engine, agents_dict
+        consensus_engine = ConsensusEngine(agents=agents)
+        agents_dict = agents
+        logger.info(f"✓ Consensus engine initialized")
+        logger.info(f"  - Agents: {list(agents.keys())}")
+        logger.info(f"  - Weights: {consensus_engine.agent_weights}")
+        
+        logger.info("✓ Sentinel-Net ready!")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize: {str(e)}", exc_info=True)
+        raise
+    
+    yield  # Server is now running
+    
+    # ==================== SHUTDOWN ====================
+    logger.info("🛑 Shutting down Sentinel-Net...")
+    consensus_engine = None
+    agents_dict = None
+    logger.info("✓ Shutdown complete")
+
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application with comprehensive security"""
     
     app = FastAPI(
         title=os.getenv("API_TITLE", "Sentinel-Net Consensus Engine"),
-        version=os.getenv("API_VERSION", "0.6.0"),
-        description="Phase 6c: Authentication, Security, Rate Limiting & DDoS Protection",
+        version=os.getenv("API_VERSION", "0.7.0"),
+        description="Phase 7: Model Loading, Consensus Engine & API Security",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,  # Enable startup/shutdown lifecycle management
     )
     
     # ==================== SECURITY MIDDLEWARES ====================
@@ -90,14 +151,88 @@ def create_app() -> FastAPI:
 app = create_app()
 
 
+# ==================== HELPER FUNCTIONS FOR ACCESSING GLOBAL STATE ====================
+
+def get_consensus_engine() -> ConsensusEngine:
+    """
+    Get the consensus engine instance.
+    
+    Call this in route handlers to access the consensus engine.
+    The engine is initialized on app startup.
+    
+    Returns:
+        ConsensusEngine: The initialized consensus engine
+        
+    Raises:
+        RuntimeError: If engine not initialized (app not started)
+    """
+    if consensus_engine is None:
+        raise RuntimeError(
+            "Consensus engine not initialized. "
+            "Make sure the app has started and models loaded successfully."
+        )
+    return consensus_engine
+
+
+def get_agents() -> dict:
+    """
+    Get the agents dictionary.
+    
+    Call this in route handlers to access individual agents.
+    
+    Returns:
+        dict: Dictionary of {agent_name: AgentBase instance}
+        
+    Raises:
+        RuntimeError: If agents not initialized
+    """
+    if agents_dict is None:
+        raise RuntimeError(
+            "Agents not initialized. "
+            "Make sure the app has started and models loaded successfully."
+        )
+    return agents_dict
+
+
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {
+    """
+    Health check endpoint with model and consensus engine status.
+    
+    Returns:
+        dict with status, service info, and component health
+    """
+    health_status = {
         "status": "healthy",
         "service": "Sentinel-Net Consensus Engine",
-        "version": os.getenv("API_VERSION", "0.6.0"),
+        "version": os.getenv("API_VERSION", "0.7.0"),
     }
+    
+    # Check consensus engine
+    try:
+        engine = get_consensus_engine()
+        agents = get_agents()
+        
+        # Count trained agents
+        trained_count = sum(1 for a in agents.values() if a.is_trained)
+        
+        health_status["consensus_engine"] = {
+            "status": "ready",
+            "agents": {
+                "total": len(agents),
+                "trained": trained_count,
+                "untrained": len(agents) - trained_count,
+                "names": list(agents.keys()),
+            },
+            "weights": engine.agent_weights,
+        }
+    except RuntimeError as e:
+        health_status["consensus_engine"] = {
+            "status": "not_initialized",
+            "error": str(e),
+        }
+    
+    return health_status
 
 
 @app.get("/")

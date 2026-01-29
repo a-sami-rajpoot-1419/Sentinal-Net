@@ -1,22 +1,19 @@
 """
 Consensus Prediction Endpoints
+Phase 7: Updated to use model loading and consensus engine from app
 """
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 import numpy as np
 from backend.consensus.engine import ConsensusEngine, ConsensusResult
-from backend.models.trainer import ModelTrainer
-from backend.data.loader import DataLoader
 from backend.shared.exceptions_v2 import ConsensusError
 
-router = APIRouter(prefix="/consensus", tags=["consensus"])
+# Import the helper functions from app.py
+from backend.api.app import get_consensus_engine, get_agents
 
-# Global instances (will be initialized with FastAPI startup)
-consensus_engine: Optional[ConsensusEngine] = None
-model_trainer: Optional[ModelTrainer] = None
-data_loader: Optional[DataLoader] = None
+router = APIRouter(prefix="/consensus", tags=["consensus"])
 
 
 class PredictionRequest(BaseModel):
@@ -55,10 +52,10 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
     Returns:
         PredictionResponse with consensus result
     """
-    if not consensus_engine:
-        raise HTTPException(status_code=503, detail="Consensus engine not initialized")
-    
     try:
+        # Get consensus engine (initialized on startup)
+        consensus_engine = get_consensus_engine()
+        
         # Convert to numpy array
         X = np.array(request.features).reshape(1, -1)
         
@@ -86,6 +83,8 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
         raise HTTPException(status_code=400, detail=str(e))
     except ConsensusError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
@@ -101,10 +100,10 @@ async def batch_predict(request: BatchPredictionRequest) -> Dict[str, Any]:
     Returns:
         Dictionary with predictions, statistics, and consensus metrics
     """
-    if not consensus_engine:
-        raise HTTPException(status_code=503, detail="Consensus engine not initialized")
-    
     try:
+        # Get consensus engine (initialized on startup)
+        consensus_engine = get_consensus_engine()
+        
         # Convert to numpy array
         X = np.array(request.features)
         
@@ -151,6 +150,8 @@ async def batch_predict(request: BatchPredictionRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(e))
     except ConsensusError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Batch prediction error: {str(e)}")
 
