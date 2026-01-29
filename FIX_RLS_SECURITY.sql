@@ -31,7 +31,7 @@ CREATE POLICY "Sessions: Authenticated users can read"
 -- Only authenticated users can insert sessions
 CREATE POLICY "Sessions: Authenticated users can create" 
     ON sessions FOR INSERT 
-    WITH CHECK (auth.role() = 'authenticated');
+    WITH CHECK (auth.role() = 'authenticated' AND auth.uid() IS NOT NULL);
 
 -- Only authenticated users can update sessions
 CREATE POLICY "Sessions: Authenticated users can update" 
@@ -49,7 +49,7 @@ CREATE POLICY "Consensus: Authenticated users can read"
 -- Only authenticated users can insert new consensus results
 CREATE POLICY "Consensus: Authenticated users can create" 
     ON consensus_results FOR INSERT 
-    WITH CHECK (auth.role() = 'authenticated');
+    WITH CHECK (auth.role() = 'authenticated' AND auth.uid() IS NOT NULL);
 
 -- ============================================================================
 -- WEIGHT UPDATES TABLE POLICIES
@@ -62,7 +62,7 @@ CREATE POLICY "WeightUpdates: Authenticated users can read"
 -- Only authenticated users can insert weight updates
 CREATE POLICY "WeightUpdates: Authenticated users can create" 
     ON weight_updates FOR INSERT 
-    WITH CHECK (auth.role() = 'authenticated');
+    WITH CHECK (auth.role() = 'authenticated' AND auth.uid() IS NOT NULL);
 
 -- ============================================================================
 -- AGENT PERFORMANCE TABLE POLICIES
@@ -80,7 +80,7 @@ CREATE POLICY "AgentPerf: Authenticated users can update"
 -- Only authenticated users can insert agent performance
 CREATE POLICY "AgentPerf: Authenticated users can create" 
     ON agent_performance FOR INSERT 
-    WITH CHECK (auth.role() = 'authenticated');
+    WITH CHECK (auth.role() = 'authenticated' AND auth.uid() IS NOT NULL);
 
 -- ============================================================================
 -- VERIFICATION
