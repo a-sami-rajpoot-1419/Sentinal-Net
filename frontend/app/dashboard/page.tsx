@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { getAPIClient, AgentPerformance } from '@/lib/api'
+import ProtectedRoute from '@/components/ProtectedRoute'
 
-export default function DashboardPage() {
+function Dashboard() {
   const [agents, setAgents] = useState<AgentPerformance[]>([])
   const [weights, setWeights] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -154,5 +155,13 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
   )
 }
