@@ -1,0 +1,91 @@
+## **Project Proposal: Sentinel-Net (Alpha Phase)**
+
+This document serves as the high-level architectural overview for **Sentinel-Net**, a multi-agent system designed to achieve high-integrity decision-making through a customized consensus protocol.
+
+---
+
+### **1. Executive Summary**
+
+* **Project Name:** Sentinel-Net
+* **Mission:** To move from "Stochastic AI" (unpredictable) to "Deterministic Consensus" (reliable) by architecting a network of diverse models that validate each other.
+* **Core Innovation:** A **Reputation-Weighted Proposer-Voter (RWPV) Protocol**—a protocol designed specifically for AI agents rather than financial transactions.
+
+---
+
+### **2. Problem Statement & Solution**
+
+#### **The Problem**
+
+Current AI systems suffer from "Single-Point Failure." If a single model (like GPT-4) hallucinations or has a bias, the user receives incorrect data. In high-stakes environments (medical, legal, financial), a 10% error rate is unacceptable.
+
+#### **The Solution: Sentinel-Net**
+
+Instead of trusting one "Genius" model, we deploy a "Council of Specialists." We combine multiple different mathematical approaches (Logistic Regression, SVM, Random Forest, Naïve Bayes) and force them to agree. The system naturally "starves" the influence of models that consistently make mistakes.
+
+---
+
+### **3. System Architecture (The "Tasting Round")**
+
+#### **A. The Model Pool (Heterogeneous Agents)**
+
+We use 4 models with fundamentally different "cognitive" structures to ensure diversity:
+
+1. **Naïve Bayes:** Fast, probabilistic, text-centric (The "Linguist").
+2. **Support Vector Machine (SVM):** Rigid, geometric boundary-based (The "Boundary Guard").
+3. **Random Forest:** Internal ensemble of decision trees (The "Democrat").
+4. **Logistic Regression:** Linear, foundational baseline (The "Rationalist").
+
+#### **B. Data Strategy**
+
+* **Initial Dataset:** *SMS Spam Collection v.1* (5,574 messages).
+* **Target Task:** Binary Classification (Spam vs. Ham).
+* **Rationale:** Small enough for instant training iterations, but complex enough to cause model disagreement.
+
+---
+
+### **4. The Custom Consensus Protocol: RWPV**
+
+Unlike blockchain protocols (BFT/PoS), **RWPV** is optimized for **semantic correctness** and **inference efficiency**.
+
+| Module | Description |
+| --- | --- |
+| **Individual Matrix** | Each model generates a prediction ( or ) and a confidence score ( to ). |
+| **Combination Module** | A central orchestrator collects these predictions and applies current **Reputation Weights**. |
+| **Consensus Mechanism** | **Weighted Majority:** . If the sum exceeds a threshold, consensus is reached. |
+| **Penalty/Reward Loop** | **The Slashing Mechanism:** If the consensus is correct, models who voted with the majority get a  weight. Those who voted against get a  weight. |
+
+---
+
+### **5. Implementation Roadmap**
+
+#### **Phase 1: The Simulator (Weeks 1-4)**
+
+* Train the 4 models on the Spam dataset.
+* Run 500 "Simulation Rounds" to see if the Weights stabilize (i.e., does the system learn to ignore the weakest model?).
+* **Goal:** Prove that Consensus Accuracy  Individual Accuracy.
+
+#### **Phase 2: The Logic Trace (Weeks 5-8)**
+
+* Integrate "Chain of Thought" (CoT). Models must provide a 1-sentence "Reasoning" for their vote.
+* The system logs these reasonings to explain *why* it decided a message was spam.
+
+#### **Phase 3: Deep Learning Transition (Future)**
+
+* Replace simple classifiers with Small Language Models (SLMs) like **Llama 3** or **Mistral**.
+* The "Voting" moves from  to **Semantic Comparison** (comparing the meaning of text).
+
+---
+
+### **6. Impact Assessment**
+
+* **Academic:** This project positions you in **Multi-Agent Systems (MAS)** and **AI Governance**. It provides a "Ready-to-Publish" framework for a Master's or PhD thesis by focusing on *Incentive Design* for AI.
+* **Professional/CV:** Demonstrates you can build **Reliable Infrastructure**, a skill set in high demand as companies move away from simple chatbots toward autonomous agents.
+* **Business:** The core "Value Proposition" is **Risk Mitigation**. You are selling a system that reduces hallucinations—a multi-billion dollar problem in Enterprise AI.
+
+---
+
+### **7. End Goal: "The AI Office"**
+
+The final vision for Sentinel-Net is a decentralized, off-chain "Truth Engine" where any model (OpenAI, Anthropic, Local) can be plugged in, and the protocol ensures the final output is the most reliable version of the truth.
+
+**Would you like me to now convert this structure into the initial Python "Simulator" code to begin the Testing Phase?**
