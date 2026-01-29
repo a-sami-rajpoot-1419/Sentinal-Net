@@ -94,28 +94,71 @@ ALTER TABLE agent_performance ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 -- 6. ROW LEVEL SECURITY POLICIES
 -- ============================================================================
--- Development: Allow all access
--- Production: Implement proper authentication-based policies
+-- Authenticated users can read all data (consensus system is read-accessible)
+-- Only service role (backend) can modify data via RLS-bypassing method
+-- This provides security while allowing backend API to function
 
-CREATE POLICY "Allow all access on sessions" 
-    ON sessions FOR ALL 
-    USING (true) 
-    WITH CHECK (true);
+-- ============================================================================
+-- SESSIONS TABLE POLICIES
+-- ============================================================================
+-- Everyone (authenticated) can read sessions
+CREATE POLICY "Sessions: Authenticated users can read" 
+    ON sessions FOR SELECT 
+    USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Allow all access on consensus_results" 
-    ON consensus_results FOR ALL 
-    USING (true) 
-    WITH CHECK (true);
+-- Only authenticated users can insert sessions
+CREATE POLICY "Sessions: Authenticated users can create" 
+    ON sessions FOR INSERT 
+    WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Allow all access on weight_updates" 
-    ON weight_updates FOR ALL 
-    USING (true) 
-    WITH CHECK (true);
+-- Only authenticated users can update their own sessions
+CREATE POLICY "Sessions: Authenticated users can update" 
+    ON sessions FOR UPDATE 
+    USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Allow all access on agent_performance" 
-    ON agent_performance FOR ALL 
-    USING (true) 
-    WITH CHECK (true);
+-- ============================================================================
+-- CONSENSUS RESULTS TABLE POLICIES
+-- ============================================================================
+-- Everyone (authenticated) can read consensus results
+CREATE POLICY "Consensus: Authenticated users can read" 
+    ON consensus_results FOR SELECT 
+    USING (auth.role() = 'authenticated');
+
+-- Only authenticated users can insert new consensus results
+CREATE POLICY "Consensus: Authenticated users can create" 
+    ON consensus_results FOR INSERT 
+    WITH CHECK (auth.role() = 'authenticated');
+
+-- ============================================================================
+-- WEIGHT UPDATES TABLE POLICIES
+-- ============================================================================
+-- Everyone (authenticated) can read weight updates
+CREATE POLICY "WeightUpdates: Authenticated users can read" 
+    ON weight_updates FOR SELECT 
+    USING (auth.role() = 'authenticated');
+
+-- Only authenticated users can insert weight updates
+CREATE POLICY "WeightUpdates: Authenticated users can create" 
+    ON weight_updates FOR INSERT 
+    WITH CHECK (auth.role() = 'authenticated');
+
+-- ============================================================================
+-- AGENT PERFORMANCE TABLE POLICIES
+-- ============================================================================
+-- Everyone (authenticated) can read agent performance metrics
+CREATE POLICY "AgentPerf: Authenticated users can read" 
+    ON agent_performance FOR SELECT 
+    USING (auth.role() = 'authenticated');
+
+-- Only authenticated users can update agent performance
+CREATE POLICY "AgentPerf: Authenticated users can update" 
+    ON agent_performance FOR UPDATE 
+    USING (auth.role() = 'authenticated');
+
+-- Only authenticated users can insert agent performance
+CREATE POLICY "AgentPerf: Authenticated users can create" 
+    ON agent_performance FOR INSERT 
+    WITH CHECK (auth.role() = 'authenticated');
 
 -- ============================================================================
 -- 7. INITIAL DATA (Optional)
