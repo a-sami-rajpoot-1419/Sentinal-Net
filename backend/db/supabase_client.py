@@ -220,6 +220,96 @@ class SupabaseClient:
         
         except Exception as e:
             raise DatabaseError(f"Error listing sessions: {str(e)}")
+    
+    # ==================== User Management ====================
+    
+    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user profile by ID"""
+        try:
+            response = self.client.table("users").select("*").eq("id", user_id).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            raise DatabaseError(f"Error fetching user {user_id}: {str(e)}")
+    
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user profile by email"""
+        try:
+            response = self.client.table("users").select("*").eq("email", email).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            raise DatabaseError(f"Error fetching user by email {email}: {str(e)}")
+    
+    def create_user(
+        self,
+        user_id: str,
+        email: str,
+        full_name: Optional[str] = None,
+        avatar_url: Optional[str] = None,
+        role: str = "user"
+    ) -> Dict[str, Any]:
+        """Create a new user profile"""
+        from datetime import datetime
+        try:
+            user_data = {
+                "id": user_id,
+                "email": email,
+                "full_name": full_name,
+                "avatar_url": avatar_url,
+                "role": role,
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table("users").insert(user_data).execute()
+            return response.data[0] if response.data else {}
+        except Exception as e:
+            raise DatabaseError(f"Error creating user {email}: {str(e)}")
+    
+    def update_user(
+        self,
+        user_id: str,
+        full_name: Optional[str] = None,
+        avatar_url: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Update user profile"""
+        from datetime import datetime
+        try:
+            update_data = {"updated_at": datetime.utcnow().isoformat()}
+            
+            if full_name is not None:
+                update_data["full_name"] = full_name
+            
+            if avatar_url is not None:
+                update_data["avatar_url"] = avatar_url
+            
+            response = self.client.table("users").update(update_data).eq("id", user_id).execute()
+            return response.data[0] if response.data else {}
+        except Exception as e:
+            raise DatabaseError(f"Error updating user {user_id}: {str(e)}")
+    
+    def delete_user(self, user_id: str) -> bool:
+        """Delete user profile"""
+        try:
+            self.client.table("users").delete().eq("id", user_id).execute()
+            return True
+        except Exception as e:
+            raise DatabaseError(f"Error deleting user {user_id}: {str(e)}")
+    
+    def list_users(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """List all users with pagination"""
+        try:
+            response = self.client.table("users").select("*").range(offset, offset + limit - 1).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            raise DatabaseError(f"Error listing users: {str(e)}")
+    
+    def user_exists(self, email: str) -> bool:
+        """Check if user exists by email"""
+        try:
+            response = self.client.table("users").select("id").eq("email", email).execute()
+            return response.data and len(response.data) > 0
+        except Exception as e:
+            raise DatabaseError(f"Error checking user existence {email}: {str(e)}")
 
 
 # Singleton instance

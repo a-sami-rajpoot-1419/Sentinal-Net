@@ -7,12 +7,21 @@ scikit-learn==1.4.1.post1
 fastapi==0.109.0
 uvicorn==0.27.0
 pydantic==2.5.3
+pydantic-extra-types==2.4.1
 python-multipart==0.0.6
 
 # ===== DATABASE & STORAGE =====
 # PostgreSQL (optional, for deployment)
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.23
+supabase==2.4.2
+
+# ===== AUTHENTICATION & SECURITY =====
+python-jose==3.3.0
+passlib==1.7.4
+python-multipart==0.0.6
+email-validator==2.1.0
+pydantic-core==2.14.1
 
 # ===== LOGGING & ANALYTICS =====
 python-json-logger==2.0.7
