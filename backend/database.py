@@ -8,6 +8,11 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 import json
 import logging
+from pathlib import Path
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 try:
     import psycopg2
@@ -46,11 +51,23 @@ class SupabaseDB:
                 connect_timeout=10,
             )
             logger.info("✓ Supabase connection pool initialized")
+            self.connected = True
         except psycopg2.OperationalError as e:
-            logger.error(f"✗ Failed to connect to Supabase: {e}")
-            raise
+            logger.warning(f"⚠ Failed to connect to Supabase: {e}")
+            logger.warning("⚠ Running in DEMO MODE - database operations will be mocked")
+            self.connection_pool = None
+            self.connected = False
+            # In demo mode, we'll store data in memory
+            self.demo_data = {
+                'agents': {},
+                'problems': {},
+                'votes': [],
+                'experiments': {},
+                'metrics': []
+            }
 
-        self._create_tables()
+        if self.connected:
+            self._create_tables()
 
     def _create_tables(self):
         """Create all necessary tables if they don't exist"""
@@ -148,16 +165,29 @@ class SupabaseDB:
 
     def get_connection(self):
         """Get a connection from the pool"""
+        if not self.connected:
+            return None
         return self.connection_pool.getconn()
 
     def return_connection(self, conn):
         """Return a connection to the pool"""
-        self.connection_pool.putconn(conn)
+        if conn and self.connected:
+            self.connection_pool.putconn(conn)
 
     # ===== AGENTS OPERATIONS =====
 
     def create_agent(self, agent_id: str, model_type: str, weight: float = 1.0) -> bool:
         """Create a new agent in the database"""
+        if not self.connected:
+            # Demo mode
+            self.demo_data['agents'][agent_id] = {
+                'agent_id': agent_id,
+                'model_type': model_type,
+                'current_weight': weight
+            }
+            logger.debug(f"[DEMO] Agent {agent_id} created/updated")
+            return True
+        
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
@@ -257,6 +287,20 @@ class SupabaseDB:
         ground_truth: Optional[int] = None,
     ) -> bool:
         """Log a consensus prediction"""
+        if not self.connected:
+            # Demo mode
+            self.demo_data['problems'][problem_id] = {
+                'problem_id': problem_id,
+                'text_raw': text_raw,
+                'text_clean': text_clean,
+                'consensus_decision': consensus_decision,
+                'consensus_confidence': consensus_confidence,
+                'ground_truth': ground_truth,
+                'created_at': datetime.now().isoformat()
+            }
+            logger.debug(f"[DEMO] Prediction {problem_id} logged")
+            return True
+        
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
@@ -300,6 +344,12 @@ class SupabaseDB:
 
     def get_recent_predictions(self, limit: int = 100) -> List[Dict]:
         """Get recent predictions with votes"""
+        if not self.connected:
+            # Demo mode
+            problems_list = list(self.demo_data['problems'].values())
+            problems_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            return problems_list[:limit]
+        
         conn = self.get_connection()
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)

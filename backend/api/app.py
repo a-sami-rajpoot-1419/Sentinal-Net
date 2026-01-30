@@ -6,7 +6,7 @@ Phase 7: Model Loading and Consensus Engine Initialization
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.middleware.gzip import GZIPMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import os
@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         agents_dict = agents
         logger.info(f"✓ Consensus engine initialized")
         logger.info(f"  - Agents: {list(agents.keys())}")
-        logger.info(f"  - Weights: {consensus_engine.agent_weights}")
+        logger.info(f"  - Weights: {consensus_engine.get_weights()}")
         
         logger.info("✓ Sentinel-Net ready!")
         
@@ -121,7 +121,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
     
     # 4. GZIP Compression (before CORS to compress efficiently)
-    app.add_middleware(GZIPMiddleware, minimum_size=1000)
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
     
     # 5. CORS Middleware (validate origins)
     origins = os.getenv("API_CORS_ORIGINS", "http://localhost:3000").strip("[]").split(",")

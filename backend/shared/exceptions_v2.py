@@ -81,3 +81,7 @@ class ConfigException(SentinelNetException):
 class DatabaseException(SentinelNetException):
     """Base exception for database-related errors."""
     pass
+
+
+# Alias for compatibility
+DatabaseError = DatabaseException
