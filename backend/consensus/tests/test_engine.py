@@ -7,7 +7,7 @@ import numpy as np
 from typing import Dict, Tuple
 from backend.consensus.engine import ConsensusEngine, ConsensusResult
 from backend.models.base import AgentBase
-from backend.shared.exceptions_v2 import ConsensusError
+from backend.shared.exceptions_v2 import ConsensusException
 
 
 class MockAgent(AgentBase):
@@ -96,7 +96,7 @@ class TestConsensusEnginePrediction:
         """Prediction should reject wrong input shape"""
         X = np.random.randn(5, 1004)  # Multiple samples
         
-        with pytest.raises(ConsensusError):
+        with pytest.raises(ConsensusException):
             consensus_engine.predict(X)
     
     def test_batch_prediction_returns_list(self, consensus_engine):

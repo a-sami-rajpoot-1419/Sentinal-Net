@@ -1,0 +1,59 @@
+{
+  "timestamp": "2026-01-30T11:17:11.151099",
+  "test_set": {
+    "sampled": 56,
+    "total": 558,
+    "sample_interval": 10
+  },
+  "summary": {
+    "disagreements": 1,
+    "agreements": 55,
+    "disagreement_rate": "1.8%",
+    "consensus_accuracy": "98.2%"
+  },
+  "model_accuracy": {
+    "logistic_regression": {
+      "correct": 55,
+      "total": 56,
+      "accuracy": "98.2%"
+    },
+    "naive_bayes": {
+      "correct": 55,
+      "total": 56,
+      "accuracy": "98.2%"
+    },
+    "random_forest": {
+      "correct": 54,
+      "total": 56,
+      "accuracy": "96.4%"
+    }
+  },
+  "disagreement_examples": [
+    {
+      "sample_id": 310,
+      "true_label": 1,
+      "predictions": {
+        "logistic_regression": {
+          "prediction": 1,
+          "confidence": 0.7279188652218418,
+          "correct": 1
+        },
+        "naive_bayes": {
+          "prediction": 1,
+          "confidence": 0.8705922117541891,
+          "correct": 1
+        },
+        "random_forest": {
+          "prediction": 0,
+          "confidence": 0.5599185886766382,
+          "correct": 0
+        }
+      },
+      "consensus": {
+        "prediction": 1,
+        "confidence": 0.7405898382575608,
+        "correct": true
+      }
+    }
+  ]
+}

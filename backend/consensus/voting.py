@@ -5,7 +5,7 @@ Weighted Voting System for Consensus
 from typing import Dict, Tuple, Any
 from dataclasses import dataclass
 import numpy as np
-from backend.shared.exceptions_v2 import ConsensusError
+from backend.shared.exceptions_v2 import ConsensusException
 
 
 @dataclass
@@ -38,10 +38,10 @@ class WeightedVoter:
             VotingResult with final prediction and confidence
         """
         if not predictions:
-            raise ConsensusError("No predictions provided")
+            raise ConsensusException("No predictions provided")
         
         if set(predictions.keys()) != set(weights.keys()):
-            raise ConsensusError("Agent names in predictions and weights don't match")
+            raise ConsensusException("Agent names in predictions and weights don't match")
         
         # Aggregate votes weighted by agent weight and confidence
         votes_per_class: Dict[int, float] = {}
@@ -76,7 +76,7 @@ class WeightedVoter:
         """Get simple majority prediction (unweighted)"""
         classes = [pred[0] for pred in predictions.values()]
         if not classes:
-            raise ConsensusError("No predictions provided")
+            raise ConsensusException("No predictions provided")
         return max(set(classes), key=classes.count)
     
     @staticmethod

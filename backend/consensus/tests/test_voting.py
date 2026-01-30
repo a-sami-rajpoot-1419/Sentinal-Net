@@ -5,7 +5,7 @@ Phase 4 Voting System Tests
 import pytest
 import numpy as np
 from backend.consensus.voting import WeightedVoter, VotingResult
-from backend.shared.exceptions_v2 import ConsensusError
+from backend.shared.exceptions_v2 import ConsensusException
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ class TestWeightedVoter:
     
     def test_vote_empty_predictions_fails(self, sample_weights):
         """Empty predictions should raise error"""
-        with pytest.raises(ConsensusError):
+        with pytest.raises(ConsensusException):
             WeightedVoter.vote({}, sample_weights)
     
     def test_vote_mismatched_agents_fails(self):
@@ -90,7 +90,7 @@ class TestWeightedVoter:
         predictions = {"agent1": (0, 0.9), "agent2": (1, 0.8)}
         weights = {"agent1": 1.0, "agent3": 1.0}  # agent2 vs agent3
         
-        with pytest.raises(ConsensusError):
+        with pytest.raises(ConsensusException):
             WeightedVoter.vote(predictions, weights)
     
     def test_vote_confidence_affects_result(self):

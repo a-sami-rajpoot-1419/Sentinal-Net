@@ -1,0 +1,306 @@
+{
+  "test_cases": [
+    {
+      "test_name": "individual_prediction_0",
+      "true_label": 0,
+      "sample_index": 0,
+      "predictions": {
+        "logistic_regression": {
+          "prediction": 0,
+          "confidence": 0.9613620949514906,
+          "correct": "True"
+        },
+        "naive_bayes": {
+          "prediction": 0,
+          "confidence": 0.9904453145821713,
+          "correct": "True"
+        },
+        "random_forest": {
+          "prediction": 0,
+          "confidence": 0.9591299205017446,
+          "correct": "True"
+        }
+      }
+    },
+    {
+      "test_name": "individual_prediction_1",
+      "true_label": 0,
+      "sample_index": 1,
+      "predictions": {
+        "logistic_regression": {
+          "prediction": 0,
+          "confidence": 0.9775276533792563,
+          "correct": "True"
+        },
+        "naive_bayes": {
+          "prediction": 0,
+          "confidence": 0.9911914213537624,
+          "correct": "True"
+        },
+        "random_forest": {
+          "prediction": 0,
+          "confidence": 0.9591299205017446,
+          "correct": "True"
+        }
+      }
+    },
+    {
+      "test_name": "individual_prediction_2",
+      "true_label": 1,
+      "sample_index": 2,
+      "predictions": {
+        "logistic_regression": {
+          "prediction": 1,
+          "confidence": 0.9556222731772929,
+          "correct": "True"
+        },
+        "naive_bayes": {
+          "prediction": 1,
+          "confidence": 0.9975977172280865,
+          "correct": "True"
+        },
+        "random_forest": {
+          "prediction": 1,
+          "confidence": 0.9260507063826967,
+          "correct": "True"
+        }
+      }
+    },
+    {
+      "test_name": "consensus_prediction_0",
+      "true_label": 0,
+      "consensus": {
+        "prediction": 0,
+        "confidence": 1.0,
+        "correct": "True",
+        "agreement_rate": 0.0,
+        "individual_predictions": {
+          "logistic_regression": {
+            "prediction": 0,
+            "confidence": 0.9613620949514906
+          },
+          "naive_bayes": {
+            "prediction": 0,
+            "confidence": 0.9904453145821713
+          },
+          "random_forest": {
+            "prediction": 0,
+            "confidence": 0.9591299205017448
+          }
+        }
+      }
+    },
+    {
+      "test_name": "consensus_prediction_1",
+      "true_label": 0,
+      "consensus": {
+        "prediction": 0,
+        "confidence": 1.0,
+        "correct": "True",
+        "agreement_rate": 0.0,
+        "individual_predictions": {
+          "logistic_regression": {
+            "prediction": 0,
+            "confidence": 0.9775276533792563
+          },
+          "naive_bayes": {
+            "prediction": 0,
+            "confidence": 0.9911914213537624
+          },
+          "random_forest": {
+            "prediction": 0,
+            "confidence": 0.9591299205017448
+          }
+        }
+      }
+    },
+    {
+      "test_name": "consensus_prediction_2",
+      "true_label": 1,
+      "consensus": {
+        "prediction": 1,
+        "confidence": 1.0,
+        "correct": "True",
+        "agreement_rate": 0.0,
+        "individual_predictions": {
+          "logistic_regression": {
+            "prediction": 1,
+            "confidence": 0.9556222731772929
+          },
+          "naive_bayes": {
+            "prediction": 1,
+            "confidence": 0.9975977172280865
+          },
+          "random_forest": {
+            "prediction": 1,
+            "confidence": 0.9260507063826967
+          }
+        }
+      }
+    }
+  ],
+  "total_tests": 10,
+  "passed": 7,
+  "failed": 0,
+  "consensus_logs": [
+    {
+      "sample_index": 0,
+      "true_label": 0,
+      "consensus_prediction": 0,
+      "reasoning": {
+        "logistic_regression": {
+          "reasoning": "Logistic Regression: HAM based on linear combination of feature weights",
+          "decision_value": -3.2141173370512406,
+          "top_spam_features": [
+            "feature_872",
+            "feature_152",
+            "feature_303"
+          ],
+          "top_ham_features": [
+            "feature_506",
+            "feature_418",
+            "feature_603"
+          ],
+          "model_name": "Logistic Regression",
+          "algorithm": "Linear logistic classification",
+          "complexity": "Low - linear model"
+        },
+        "naive_bayes": {
+          "reasoning": "Naive Bayes: HAM based on word frequency patterns and probabilities",
+          "top_spam_indicators": [
+            "word_303",
+            "word_872",
+            "word_793"
+          ],
+          "top_ham_indicators": [
+            "word_418",
+            "word_603",
+            "word_438"
+          ],
+          "active_features_count": 4,
+          "model_name": "Multinomial Naive Bayes",
+          "algorithm": "Probabilistic word frequency analysis"
+        },
+        "random_forest": {
+          "reasoning": "Random Forest: HAM based on voting of 100 decision trees",
+          "n_trees": 100,
+          "tree_votes_for_class": 95,
+          "top_important_features": [
+            "feature_872",
+            "feature_303",
+            "feature_152"
+          ],
+          "ensemble_agreement": 0.9591299205017448,
+          "model_name": "Random Forest",
+          "algorithm": "Ensemble voting of decision trees"
+        }
+      }
+    },
+    {
+      "sample_index": 1,
+      "true_label": 0,
+      "consensus_prediction": 0,
+      "reasoning": {
+        "logistic_regression": {
+          "reasoning": "Logistic Regression: HAM based on linear combination of feature weights",
+          "decision_value": -3.772741067117038,
+          "top_spam_features": [
+            "feature_872",
+            "feature_152",
+            "feature_303"
+          ],
+          "top_ham_features": [
+            "feature_506",
+            "feature_418",
+            "feature_603"
+          ],
+          "model_name": "Logistic Regression",
+          "algorithm": "Linear logistic classification",
+          "complexity": "Low - linear model"
+        },
+        "naive_bayes": {
+          "reasoning": "Naive Bayes: HAM based on word frequency patterns and probabilities",
+          "top_spam_indicators": [
+            "word_303",
+            "word_872",
+            "word_793"
+          ],
+          "top_ham_indicators": [
+            "word_418",
+            "word_603",
+            "word_438"
+          ],
+          "active_features_count": 2,
+          "model_name": "Multinomial Naive Bayes",
+          "algorithm": "Probabilistic word frequency analysis"
+        },
+        "random_forest": {
+          "reasoning": "Random Forest: HAM based on voting of 100 decision trees",
+          "n_trees": 100,
+          "tree_votes_for_class": 95,
+          "top_important_features": [
+            "feature_872",
+            "feature_303",
+            "feature_152"
+          ],
+          "ensemble_agreement": 0.9591299205017448,
+          "model_name": "Random Forest",
+          "algorithm": "Ensemble voting of decision trees"
+        }
+      }
+    },
+    {
+      "sample_index": 2,
+      "true_label": 1,
+      "consensus_prediction": 1,
+      "reasoning": {
+        "logistic_regression": {
+          "reasoning": "Logistic Regression: SPAM based on linear combination of feature weights",
+          "decision_value": 3.0696250278015293,
+          "top_spam_features": [
+            "feature_872",
+            "feature_152",
+            "feature_303"
+          ],
+          "top_ham_features": [
+            "feature_506",
+            "feature_418",
+            "feature_603"
+          ],
+          "model_name": "Logistic Regression",
+          "algorithm": "Linear logistic classification",
+          "complexity": "Low - linear model"
+        },
+        "naive_bayes": {
+          "reasoning": "Naive Bayes: SPAM based on word frequency patterns and probabilities",
+          "top_spam_indicators": [
+            "word_303",
+            "word_872",
+            "word_793"
+          ],
+          "top_ham_indicators": [
+            "word_418",
+            "word_603",
+            "word_438"
+          ],
+          "active_features_count": 12,
+          "model_name": "Multinomial Naive Bayes",
+          "algorithm": "Probabilistic word frequency analysis"
+        },
+        "random_forest": {
+          "reasoning": "Random Forest: SPAM based on voting of 100 decision trees",
+          "n_trees": 100,
+          "tree_votes_for_class": 92,
+          "top_important_features": [
+            "feature_872",
+            "feature_303",
+            "feature_152"
+          ],
+          "ensemble_agreement": 0.9260507063826965,
+          "model_name": "Random Forest",
+          "algorithm": "Ensemble voting of decision trees"
+        }
+      }
+    }
+  ]
+}

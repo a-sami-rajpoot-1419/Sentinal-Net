@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
 from backend.models.trainer import ModelTrainer
-from backend.shared.exceptions_v2 import ConsensusError
+from backend.shared.exceptions_v2 import ConsensusException
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 

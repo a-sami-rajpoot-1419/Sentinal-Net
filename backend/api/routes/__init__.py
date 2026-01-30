@@ -14,9 +14,10 @@ def include_routes(app: FastAPI):
         app: FastAPI application instance
     """
     # Import routes
-    from . import auth, consensus, agents
+    from . import auth, consensus, agents, classify
     
     # Include routers
     app.include_router(auth.router)
     app.include_router(consensus.router)
     app.include_router(agents.router)
+    app.include_router(classify.router)

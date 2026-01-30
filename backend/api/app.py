@@ -21,6 +21,7 @@ from backend.security.rate_limiter import (
 )
 from backend.models.loader import ModelLoader
 from backend.consensus.engine import ConsensusEngine
+from backend.database import init_db, get_db
 
 # Load environment variables
 load_dotenv()
@@ -50,11 +51,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     logger.info("🚀 Starting Sentinel-Net Consensus Engine...")
     
     try:
+        # Initialize database
+        logger.info("🗄️  Initializing Supabase database...")
+        db = init_db()
+        logger.info("✓ Database initialized")
+        
         # Load or initialize agents
         logger.info("📦 Loading ML agents...")
         allow_uninitialized = os.getenv("ALLOW_UNINITIALIZED_MODELS", "true").lower() == "true"
         agents = ModelLoader.load_models(allow_uninitialized=allow_uninitialized)
         logger.info(f"✓ Loaded {len(agents)} agents")
+        
+        # Create agents in database
+        for agent_id, agent in agents.items():
+            db.create_agent(agent_id, agent.model_type if hasattr(agent, 'model_type') else 'unknown')
         
         # Count trained vs untrained
         trained_count = sum(1 for a in agents.values() if a.is_trained)

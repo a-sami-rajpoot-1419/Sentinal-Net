@@ -5,7 +5,7 @@ Phase 4 Reputation Manager Tests
 import pytest
 from datetime import datetime
 from backend.consensus.reputation import ReputationManager, AgentReputation
-from backend.shared.exceptions_v2 import ConsensusError
+from backend.shared.exceptions_v2 import ConsensusException
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ class TestReputationManagerInitialization:
         """Should not allow reinitializing existing agent"""
         reputation_manager.initialize_agent("agent1")
         
-        with pytest.raises(ConsensusError):
+        with pytest.raises(ConsensusException):
             reputation_manager.initialize_agent("agent1")
 
 
@@ -180,7 +180,7 @@ class TestWeightUpdating:
     
     def test_weight_update_unknown_agent_fails(self, reputation_manager):
         """Should fail updating unknown agent"""
-        with pytest.raises(ConsensusError):
+        with pytest.raises(ConsensusException):
             reputation_manager.update_weight("unknown", 1.5)
 
 

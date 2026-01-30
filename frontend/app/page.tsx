@@ -10,7 +10,6 @@ export default function HomePage() {
     active_sessions: 0,
     predictions_today: 0,
   })
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -24,8 +23,6 @@ export default function HomePage() {
         })
       } catch (error) {
         console.error('Failed to fetch stats:', error)
-      } finally {
-        setLoading(false)
       }
     }
 

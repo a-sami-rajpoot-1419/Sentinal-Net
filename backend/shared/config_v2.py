@@ -7,7 +7,7 @@ Author: Sentinel-Net Team
 Date: 2026-01-29
 """
 
-from pydantic_settings import BaseSettings
+from pydantic import BaseSettings
 from pathlib import Path
 from typing import Optional
 import logging

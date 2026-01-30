@@ -2,11 +2,11 @@
 Agent Reputation Management System
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
 import numpy as np
-from backend.shared.exceptions_v2 import ConsensusError
+from backend.shared.exceptions_v2 import ConsensusException
 
 
 @dataclass
@@ -58,7 +58,7 @@ class ReputationManager:
     def initialize_agent(self, agent_name: str, initial_weight: float = 1.0) -> None:
         """Initialize reputation for a new agent"""
         if agent_name in self.reputations:
-            raise ConsensusError(f"Agent {agent_name} already initialized")
+            raise ConsensusException(f"Agent {agent_name} already initialized")
         
         self.reputations[agent_name] = AgentReputation(
             agent_name=agent_name,
@@ -130,7 +130,7 @@ class ReputationManager:
     def update_weight(self, agent_name: str, new_weight: float) -> None:
         """Update agent weight and record history"""
         if agent_name not in self.reputations:
-            raise ConsensusError(f"Unknown agent: {agent_name}")
+            raise ConsensusException(f"Unknown agent: {agent_name}")
         
         rep = self.reputations[agent_name]
         rep.current_weight = new_weight
@@ -141,7 +141,7 @@ class ReputationManager:
     def get_reputation(self, agent_name: str) -> AgentReputation:
         """Get reputation for a single agent"""
         if agent_name not in self.reputations:
-            raise ConsensusError(f"Unknown agent: {agent_name}")
+            raise ConsensusException(f"Unknown agent: {agent_name}")
         return self.reputations[agent_name]
     
     def get_all_reputations(self) -> Dict[str, AgentReputation]:
@@ -176,7 +176,7 @@ class ReputationManager:
     def get_agent_stats(self, agent_name: str) -> Dict[str, Any]:
         """Get detailed statistics for an agent"""
         if agent_name not in self.reputations:
-            raise ConsensusError(f"Unknown agent: {agent_name}")
+            raise ConsensusException(f"Unknown agent: {agent_name}")
         
         rep = self.reputations[agent_name]
         

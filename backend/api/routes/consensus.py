@@ -1,14 +1,18 @@
 """
 Consensus Prediction Endpoints
 Phase 7: Updated to use model loading and consensus engine from app
+Phase 8: Database integration for logging and persistence
 """
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import Dict, List, Any
 import numpy as np
+import uuid
+from datetime import datetime
 from backend.consensus.engine import ConsensusEngine, ConsensusResult
-from backend.shared.exceptions_v2 import ConsensusError
+from backend.shared.exceptions_v2 import ConsensusException
+from backend.database import get_db
 
 # Import the helper functions from app.py
 from backend.api.app import get_consensus_engine, get_agents
@@ -81,7 +85,7 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except ConsensusError as e:
+    except ConsensusException as e:
         raise HTTPException(status_code=422, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
@@ -148,7 +152,7 @@ async def batch_predict(request: BatchPredictionRequest) -> Dict[str, Any]:
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except ConsensusError as e:
+    except ConsensusException as e:
         raise HTTPException(status_code=422, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
@@ -167,6 +171,7 @@ async def update_weights(request: WeightUpdateRequest) -> Dict[str, Any]:
     Returns:
         Dictionary with updated weights and reputation metrics
     """
+    consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
     
@@ -194,7 +199,7 @@ async def update_weights(request: WeightUpdateRequest) -> Dict[str, Any]:
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except ConsensusError as e:
+    except ConsensusException as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Weight update error: {str(e)}")
@@ -203,6 +208,7 @@ async def update_weights(request: WeightUpdateRequest) -> Dict[str, Any]:
 @router.get("/weights")
 async def get_weights() -> Dict[str, float]:
     """Get current agent weights"""
+    consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
     
@@ -212,6 +218,7 @@ async def get_weights() -> Dict[str, float]:
 @router.get("/reputations")
 async def get_reputations() -> Dict[str, Any]:
     """Get reputation statistics for all agents"""
+    consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
     
@@ -221,18 +228,20 @@ async def get_reputations() -> Dict[str, Any]:
 @router.get("/reputation/{agent_name}")
 async def get_agent_reputation(agent_name: str) -> Dict[str, Any]:
     """Get reputation statistics for a specific agent"""
+    consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
     
     try:
         return consensus_engine.get_agent_reputation(agent_name)
-    except ConsensusError as e:
+    except ConsensusException as e:
         raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.post("/reset-weights")
 async def reset_weights() -> Dict[str, Any]:
     """Reset all agent weights to 1.0"""
+    consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
     
@@ -250,6 +259,7 @@ async def reset_weights() -> Dict[str, Any]:
 @router.get("/prediction-history")
 async def get_prediction_history(limit: int = 100) -> List[Dict[str, Any]]:
     """Get recent prediction history"""
+    consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
     

@@ -145,7 +145,11 @@ class DataLoader:
             )
         
         logger.info(f"Loading dataset from {csv_path}")
-        df = pd.read_csv(csv_path, encoding='latin-1')
+        # Try tab-separated first (SMS Spam Collection format), then comma-separated
+        try:
+            df = pd.read_csv(csv_path, encoding='latin-1', sep='\t')
+        except:
+            df = pd.read_csv(csv_path, encoding='latin-1')
         
         # Handle different column names (dataset has varied formats)
         if len(df.columns) >= 2:

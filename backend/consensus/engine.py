@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import numpy as np
 from backend.models.base import AgentBase
-from backend.shared.utils import compute_weighted_vote, consensus_confidence
-from backend.shared.exceptions_v2 import ConsensusError
+from backend.shared.utils import compute_weighted_vote
+from backend.shared.exceptions_v2 import ConsensusException
 
 
 @dataclass
@@ -94,16 +94,19 @@ class ConsensusEngine:
             ConsensusResult with final prediction and confidence
         """
         if X.shape[0] != 1:
-            raise ConsensusError(f"Expected single sample, got {X.shape[0]}")
+            raise ConsensusException(f"Expected single sample, got {X.shape[0]}")
         
         # Get predictions from all agents
         agent_predictions = {}
         reasoning = {}
         
         for agent_name, agent in self.agents.items():
+            # Skip untrained agents
+            if not agent.is_trained:
+                continue
             predicted_class, confidence = agent.predict(X)
             agent_predictions[agent_name] = (predicted_class, confidence)
-            reasoning[agent_name] = agent._generate_reasoning()
+            reasoning[agent_name] = agent._generate_reasoning(X, predicted_class)
         
         # Perform weighted voting
         final_class, final_confidence = compute_weighted_vote(
@@ -210,7 +213,7 @@ class ConsensusEngine:
     def get_agent_reputation(self, agent_name: str) -> Dict[str, Any]:
         """Get reputation statistics for an agent"""
         if agent_name not in self.agents:
-            raise ConsensusError(f"Unknown agent: {agent_name}")
+            raise ConsensusException(f"Unknown agent: {agent_name}")
         
         agent_predictions = [
             h["predictions"].get(agent_name) 
@@ -259,7 +262,7 @@ class ConsensusEngine:
     def set_weight(self, agent_name: str, weight: float) -> None:
         """Manually set weight for an agent"""
         if agent_name not in self.agents:
-            raise ConsensusError(f"Unknown agent: {agent_name}")
+            raise ConsensusException(f"Unknown agent: {agent_name}")
         
         weight = np.clip(weight, self.weight_min, self.weight_max)
         self.weights[agent_name] = weight
