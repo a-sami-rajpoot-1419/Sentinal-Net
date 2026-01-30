@@ -23,12 +23,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Add backend to path
-sys.path.insert(0, str(Path(__file__).parent / "backend"))
+sys.path.insert(0, str(Path(__file__).parent))
 
-from data.loader import DataLoader
-from models.loader import ModelLoader
-from consensus.engine import ConsensusEngine
-from consensus.reputation import ReputationManager
+from backend.data.loader import DataLoader
+from backend.models.loader import ModelLoader
+from backend.consensus.engine import ConsensusEngine
+from backend.consensus.reputation import ReputationManager
 
 
 class MockAgent:
