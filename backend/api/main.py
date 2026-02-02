@@ -16,7 +16,6 @@ sys.path.insert(0, str(project_root))
 load_dotenv()
 
 from backend.api.app import app
-from backend.api.routes import include_routes
 import uvicorn
 import logging
 
@@ -26,10 +25,6 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-
-# Include all routes
-include_routes(app)
 
 
 def main():

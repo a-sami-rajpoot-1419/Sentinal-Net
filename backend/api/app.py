@@ -117,9 +117,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
             preprocessor = DataPreprocessor()
         
         logger.info("✓ Sentinel-Net ready!")
+        logger.info("=" * 50)
+        logger.info("🎯 Application is fully initialized and ready to serve requests")
+        logger.info("=" * 50)
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize: {str(e)}", exc_info=True)
+        import traceback
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
         raise
     
     yield  # Server is now running

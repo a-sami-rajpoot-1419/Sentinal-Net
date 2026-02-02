@@ -39,13 +39,25 @@ async def register(user_data: UserCreate) -> TokenResponse:
     """
     try:
         supabase = get_supabase_client()
+        logger.info(f"Starting registration for {user_data.email}")
         
         # Step 1: Check if user already exists in users table
-        if supabase.user_exists(user_data.email):
-            logger.warning(f"Registration attempt with existing email: {user_data.email}")
+        try:
+            exists = supabase.user_exists(user_data.email)
+            if exists:
+                logger.warning(f"Registration attempt with existing email: {user_data.email}")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Email already registered"
+                )
+            logger.info(f"✓ Email {user_data.email} is available")
+        except HTTPException:
+            raise
+        except Exception as check_error:
+            logger.error(f"✗ Error checking email existence: {str(check_error)}")
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email already registered"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error checking email availability"
             )
         
         # Step 2: Create auth user via Supabase Auth with ANON_KEY
