@@ -121,18 +121,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         logger.info("🎯 Application is fully initialized and ready to serve requests")
         logger.info("=" * 50)
         
+        yield  # Server is now running
+        
     except Exception as e:
         logger.error(f"❌ Failed to initialize: {str(e)}", exc_info=True)
         import traceback
         logger.error(f"Full traceback:\n{traceback.format_exc()}")
         raise
     
-    yield  # Server is now running
-    
     # ==================== SHUTDOWN ====================
     logger.info("🛑 Shutting down Sentinel-Net...")
-    consensus_engine = None
-    agents_dict = None
     logger.info("✓ Shutdown complete")
 
 

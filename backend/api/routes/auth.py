@@ -79,21 +79,44 @@ async def register(user_data: UserCreate) -> TokenResponse:
                 "password": user_data.password
             }
             
+            logger.info(f"Calling Supabase auth endpoint: {auth_url}")
+            logger.info(f"Payload: {payload}")
+            
             auth_response = requests.post(auth_url, json=payload, headers=headers, timeout=10)
             
+            logger.info(f"Supabase response status: {auth_response.status_code}")
+            logger.info(f"Supabase response body: {auth_response.text}")
+            
             if auth_response.status_code not in [200, 201]:
-                error_detail = auth_response.json().get("msg", "Failed to create auth user")
-                logger.error(f"✗ Supabase auth error ({auth_response.status_code}): {error_detail}")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Failed to create user account: {error_detail}"
-                )
+                error_data = auth_response.json()
+                error_detail = error_data.get("msg", error_data.get("error_code", "Unknown error"))
+                error_code = error_data.get("error_code", "")
+                
+                logger.error(f"✗ Supabase auth error ({auth_response.status_code}): {error_code} - {error_detail}")
+                
+                # Provide helpful error messages
+                if "email_address_invalid" in error_code:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Invalid email format. Please check your email address."
+                    )
+                elif "user_already_exists" in error_code:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Email already registered"
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Failed to create user account: {error_detail}"
+                    )
             
             auth_data = auth_response.json()
             auth_id = auth_data.get("user", {}).get("id")
             
             if not auth_id:
                 logger.error("✗ No user ID returned from Supabase auth")
+                logger.error(f"Full response: {auth_data}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to retrieve user ID from auth service"
@@ -104,13 +127,15 @@ async def register(user_data: UserCreate) -> TokenResponse:
         except HTTPException:
             raise
         except requests.exceptions.RequestException as e:
-            logger.error(f"✗ Error creating auth user: {str(e)}")
+            logger.error(f"✗ Error creating auth user (network error): {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Auth service unavailable"
             )
         except Exception as e:
             logger.error(f"✗ Unexpected error creating auth user: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to create user account"
