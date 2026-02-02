@@ -105,13 +105,13 @@ export default function DevelopersPage() {
               </div>
               <div className="text-gray-400">
                 <br />
-                result = response.json()
+                {`result = response.json()`}
               </div>
               <div className="text-gray-400">
-                print(f"Classification: {result['classification']}")
+                {`print(f"Classification: {result['classification']}`}
               </div>
               <div className="text-gray-400">
-                print(f"Confidence: {result['confidence']:.1%}")
+                {`print(f"Confidence: {result['confidence']:.1%}`}
               </div>
             </div>
           </section>

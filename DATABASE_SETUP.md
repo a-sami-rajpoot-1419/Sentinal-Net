@@ -13,6 +13,7 @@
    - Click "New Query"
 
 3. **Copy and Paste SQL**
+
    ```sql
    -- Create users table for authentication
    CREATE TABLE IF NOT EXISTS public.users (
@@ -71,6 +72,7 @@ except Exception as e:
 ```
 
 Run from project root:
+
 ```bash
 python -c "from backend.db.migrations import CREATE_USERS_TABLE; print(CREATE_USERS_TABLE)"
 ```
@@ -99,16 +101,16 @@ python -c "from backend.db.migrations import CREATE_USERS_TABLE; print(CREATE_US
 
 ```sql
 -- Verify table exists
-SELECT * FROM information_schema.tables 
+SELECT * FROM information_schema.tables
 WHERE table_name = 'users' AND table_schema = 'public';
 
 -- Verify columns
-SELECT column_name, data_type, is_nullable 
-FROM information_schema.columns 
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
 WHERE table_name = 'users' AND table_schema = 'public';
 
 -- Verify indexes
-SELECT indexname FROM pg_indexes 
+SELECT indexname FROM pg_indexes
 WHERE tablename = 'users' AND schemaname = 'public';
 ```
 
@@ -117,6 +119,7 @@ WHERE tablename = 'users' AND schemaname = 'public';
 ## Test Registration After Setup
 
 ### 1. Restart Backend
+
 ```bash
 # In terminal with virtual environment activated
 cd c:\Sami\Sentinal-net
@@ -136,6 +139,7 @@ curl -X POST http://localhost:8000/auth/register \
 ```
 
 ### Expected Response:
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIs...",
@@ -162,16 +166,21 @@ curl -X POST http://localhost:8000/auth/register \
 ## Troubleshooting
 
 ### Error: "Invalid API key"
+
 **Solution:** Check .env file has SUPABASE_ANON_KEY
 
 ### Error: "users table does not exist"
+
 **Solution:** Run the SQL create table script above in Supabase SQL Editor
 
 ### Error: "duplicate key value violates unique constraint"
+
 **Solution:** User already exists. Use different email or delete from auth.users first
 
 ### Error: "permission denied for schema public"
-**Solution:** 
+
+**Solution:**
+
 - Check that your Supabase SERVICE_ROLE_KEY has admin permissions
 - Regenerate the key in Supabase dashboard if needed
 
@@ -179,18 +188,18 @@ curl -X POST http://localhost:8000/auth/register \
 
 ## Fields Explanation
 
-| Field | Type | Purpose |
-|-------|------|---------|
-| id | UUID | Database primary key (auto-generated) |
-| auth_id | UUID | Reference to Supabase auth.users.id (foreign key) |
-| email | TEXT | User email (unique, from Supabase auth) |
-| full_name | TEXT | User's display name (optional) |
-| avatar_url | TEXT | User's profile image URL (optional) |
-| role | TEXT | User role: 'user' (default), 'admin', or 'moderator' |
-| is_active | BOOLEAN | Account active status (default: true) |
-| email_verified | BOOLEAN | Email verification status (default: false) |
-| created_at | TIMESTAMP | Account creation time (auto-set to now) |
-| updated_at | TIMESTAMP | Last update time (auto-set to now) |
+| Field          | Type      | Purpose                                              |
+| -------------- | --------- | ---------------------------------------------------- |
+| id             | UUID      | Database primary key (auto-generated)                |
+| auth_id        | UUID      | Reference to Supabase auth.users.id (foreign key)    |
+| email          | TEXT      | User email (unique, from Supabase auth)              |
+| full_name      | TEXT      | User's display name (optional)                       |
+| avatar_url     | TEXT      | User's profile image URL (optional)                  |
+| role           | TEXT      | User role: 'user' (default), 'admin', or 'moderator' |
+| is_active      | BOOLEAN   | Account active status (default: true)                |
+| email_verified | BOOLEAN   | Email verification status (default: false)           |
+| created_at     | TIMESTAMP | Account creation time (auto-set to now)              |
+| updated_at     | TIMESTAMP | Last update time (auto-set to now)                   |
 
 ---
 
@@ -216,7 +225,7 @@ CREATE POLICY "Users update own profile" ON public.users
 -- Only admins can delete users
 CREATE POLICY "Admins can delete users" ON public.users
   FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.users 
+    EXISTS (SELECT 1 FROM public.users
             WHERE auth_id = auth.uid() AND role = 'admin')
   );
 ```
@@ -228,11 +237,13 @@ CREATE POLICY "Admins can delete users" ON public.users
 Once the users table is created:
 
 1. **Start Backend**
+
    ```bash
    python -m uvicorn backend.api.app:app --reload
    ```
 
 2. **Start Frontend**
+
    ```bash
    cd frontend
    npm run dev

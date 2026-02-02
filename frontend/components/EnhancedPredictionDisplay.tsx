@@ -10,8 +10,6 @@ import {
   Clock,
   Zap,
   Cpu,
-  Gauge,
-  GitBranch,
 } from "lucide-react";
 
 interface AgentVote {
@@ -478,7 +476,7 @@ export default function EnhancedPredictionDisplay({
                   📊 PRE-PREDICTION WEIGHTS
                 </div>
                 <div className="space-y-3">
-                  {agents.map(([agentName, vote], idx) => (
+                  {agents.map(([agentName, vote]) => (
                     <div key={`pre-${agentName}`} className="space-y-1">
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-gray-400 capitalize">
@@ -507,7 +505,7 @@ export default function EnhancedPredictionDisplay({
                   📈 POST-PREDICTION WEIGHTS (Updated)
                 </div>
                 <div className="space-y-3">
-                  {agents.map(([agentName, vote], idx) => {
+                  {agents.map(([agentName, vote]) => {
                     const agentCorrect =
                       vote?.prediction === result.classification;
                     const postWeight = agentCorrect
