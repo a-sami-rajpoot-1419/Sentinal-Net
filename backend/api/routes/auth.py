@@ -40,13 +40,20 @@ async def register(user_data: UserCreate) -> TokenResponse:
     try:
         supabase = get_supabase_client()
         
-        # Check if user already exists
-        if supabase.user_exists(user_data.email):
-            logger.warning(f"Registration attempt with existing email: {user_data.email}")
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email already registered"
-            )
+        # Check if user already exists (handle gracefully if users table doesn't exist)
+        try:
+            if supabase.user_exists(user_data.email):
+                logger.warning(f"Registration attempt with existing email: {user_data.email}")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Email already registered"
+                )
+        except Exception as check_error:
+            # If users table doesn't exist yet, log and continue
+            if "users" in str(check_error).lower():
+                logger.warning(f"Users table not yet created - proceeding with auth: {str(check_error)}")
+            else:
+                raise
         
         # Create auth user via Supabase Auth
         try:
@@ -65,20 +72,24 @@ async def register(user_data: UserCreate) -> TokenResponse:
                 detail="Failed to create user account"
             )
         
-        # Create user profile in database
-        user_profile = supabase.create_user(
-            user_id=user_id,
-            email=user_data.email,
-            full_name=user_data.full_name,
-            role="user"
-        )
-        
-        if not user_profile:
-            logger.error(f"Failed to create user profile for {user_data.email}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create user profile"
+        # Try to create user profile in database (handle gracefully if table doesn't exist)
+        try:
+            user_profile = supabase.create_user(
+                user_id=user_id,
+                email=user_data.email,
+                full_name=user_data.full_name,
+                role="user"
             )
+            
+            if not user_profile:
+                logger.warning(f"Failed to create user profile for {user_data.email} but auth user exists")
+        except Exception as profile_error:
+            # If users table doesn't exist, log warning but continue
+            if "users" in str(profile_error).lower() or "does not exist" in str(profile_error).lower():
+                logger.warning(f"Users table not yet created - skipping profile creation: {str(profile_error)}")
+                logger.info(f"⚠️  Auth user created but profile not saved. Create users table to enable full registration.")
+            else:
+                raise
         
         # Generate tokens
         tokens = create_tokens(

@@ -7,11 +7,9 @@ from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
 from backend.models.trainer import ModelTrainer
 from backend.shared.exceptions_v2 import ConsensusException
+from backend.api.app import get_consensus_engine
 
 router = APIRouter(prefix="/agents", tags=["agents"])
-
-# Global instances
-model_trainer: Optional[ModelTrainer] = None
 
 
 class AgentInfoResponse(BaseModel):
@@ -26,17 +24,22 @@ class AgentInfoResponse(BaseModel):
 @router.get("/list")
 async def list_agents() -> Dict[str, Any]:
     """List all available agents and their status"""
-    if not model_trainer:
-        raise HTTPException(status_code=503, detail="Model trainer not initialized")
+    consensus_engine = get_consensus_engine()
+    if not consensus_engine:
+        raise HTTPException(status_code=503, detail="Consensus engine not initialized")
     
     try:
         agents_info = {}
-        for agent_name, agent in model_trainer.agents.items():
+        weights = consensus_engine.get_weights()
+        
+        # Get agents from consensus engine
+        for agent_name, agent in consensus_engine.agents.items():
             agents_info[agent_name] = {
                 "agent_name": agent_name,
                 "model_type": agent.__class__.__name__,
                 "accuracy": float(agent.accuracy) if hasattr(agent, 'accuracy') else 0.0,
                 "is_trained": agent.is_trained if hasattr(agent, 'is_trained') else False,
+                "weight": float(weights.get(agent_name, 1.0)),
             }
         
         return {
@@ -51,20 +54,22 @@ async def list_agents() -> Dict[str, Any]:
 @router.get("/{agent_name}")
 async def get_agent_info(agent_name: str) -> Dict[str, Any]:
     """Get detailed information about a specific agent"""
-    if not model_trainer:
-        raise HTTPException(status_code=503, detail="Model trainer not initialized")
+    consensus_engine = get_consensus_engine()
+    if not consensus_engine:
+        raise HTTPException(status_code=503, detail="Consensus engine not initialized")
     
     try:
-        if agent_name not in model_trainer.agents:
+        if agent_name not in consensus_engine.agents:
             raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
         
-        agent = model_trainer.agents[agent_name]
+        agent = consensus_engine.agents[agent_name]
+        weights = consensus_engine.get_weights()
         
         return {
             "agent_name": agent_name,
             "model_type": agent.__class__.__name__,
             "accuracy": float(agent.accuracy) if hasattr(agent, 'accuracy') else 0.0,
-            "weight": float(model_trainer.get_agent_weights().get(agent_name, 1.0)),
+            "weight": float(weights.get(agent_name, 1.0)),
             "is_trained": agent.is_trained if hasattr(agent, 'is_trained') else False,
             "confidence": float(agent.confidence) if hasattr(agent, 'confidence') else 0.0,
         }
@@ -78,8 +83,9 @@ async def get_agent_info(agent_name: str) -> Dict[str, Any]:
 @router.get("/performance/comparison")
 async def compare_agent_performance() -> Dict[str, Any]:
     """Compare performance metrics across all agents"""
-    if not model_trainer:
-        raise HTTPException(status_code=503, detail="Model trainer not initialized")
+    consensus_engine = get_consensus_engine()
+    if not consensus_engine:
+        raise HTTPException(status_code=503, detail="Consensus engine not initialized")
     
     try:
         comparison = {
@@ -88,14 +94,15 @@ async def compare_agent_performance() -> Dict[str, Any]:
             "average_accuracy": 0.0,
         }
         
+        weights = consensus_engine.get_weights()
         accuracies = []
-        for agent_name, agent in model_trainer.agents.items():
+        for agent_name, agent in consensus_engine.agents.items():
             accuracy = float(agent.accuracy) if hasattr(agent, 'accuracy') else 0.0
             accuracies.append(accuracy)
             
             comparison["agents"][agent_name] = {
                 "accuracy": accuracy,
-                "weight": float(model_trainer.get_agent_weights().get(agent_name, 1.0)),
+                "weight": float(weights.get(agent_name, 1.0)),
                 "model_type": agent.__class__.__name__,
             }
         
