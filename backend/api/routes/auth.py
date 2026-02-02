@@ -40,66 +40,58 @@ async def register(user_data: UserCreate) -> TokenResponse:
     try:
         supabase = get_supabase_client()
         
-        # Check if user already exists (handle gracefully if users table doesn't exist)
-        try:
-            if supabase.user_exists(user_data.email):
-                logger.warning(f"Registration attempt with existing email: {user_data.email}")
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Email already registered"
-                )
-        except Exception as check_error:
-            # If users table doesn't exist yet, log and continue
-            if "users" in str(check_error).lower():
-                logger.warning(f"Users table not yet created - proceeding with auth: {str(check_error)}")
-            else:
-                raise
+        # Step 1: Check if user already exists in users table
+        if supabase.user_exists(user_data.email):
+            logger.warning(f"Registration attempt with existing email: {user_data.email}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered"
+            )
         
-        # Create auth user via Supabase Auth
+        # Step 2: Create auth user via Supabase Auth with ANON_KEY
         try:
             auth_response = supabase.auth_client.auth.sign_up({
                 "email": user_data.email,
                 "password": user_data.password,
             })
             
-            user_id = auth_response.user.id
-            logger.info(f"Auth user created: {user_id}")
+            auth_id = auth_response.user.id
+            logger.info(f"✓ Auth user created with ID: {auth_id}")
             
         except Exception as e:
-            logger.error(f"Error creating auth user: {str(e)}")
+            logger.error(f"✗ Error creating auth user: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to create user account"
             )
         
-        # Try to create user profile in database (handle gracefully if table doesn't exist)
+        # Step 3: Create user profile in users table with auth_id
         try:
             user_profile = supabase.create_user(
-                user_id=user_id,
+                auth_id=auth_id,
                 email=user_data.email,
                 full_name=user_data.full_name,
                 role="user"
             )
             
-            if not user_profile:
-                logger.warning(f"Failed to create user profile for {user_data.email} but auth user exists")
+            logger.info(f"✓ User profile created: {user_data.email}")
+            
         except Exception as profile_error:
-            # If users table doesn't exist, log warning but continue
-            if "users" in str(profile_error).lower() or "does not exist" in str(profile_error).lower():
-                logger.warning(f"Users table not yet created - skipping profile creation: {str(profile_error)}")
-                logger.info(f"⚠️  Auth user created but profile not saved. Create users table to enable full registration.")
-            else:
-                raise
+            logger.error(f"✗ Failed to create user profile: {str(profile_error)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create user profile"
+            )
         
-        # Generate tokens
+        # Step 4: Generate JWT tokens
         tokens = create_tokens(
-            user_id=user_id,
+            user_id=auth_id,
             email=user_data.email,
             role="user",
             full_name=user_data.full_name
         )
         
-        logger.info(f"User registered successfully: {user_data.email}")
+        logger.info(f"✓ User registered successfully: {user_data.email}")
         
         return TokenResponse(
             access_token=tokens["access_token"],
@@ -107,7 +99,7 @@ async def register(user_data: UserCreate) -> TokenResponse:
             token_type=tokens["token_type"],
             expires_in=tokens["expires_in"],
             user=UserResponse(
-                id=user_id,
+                id=auth_id,
                 email=user_data.email,
                 full_name=user_data.full_name,
                 role="user",
@@ -149,42 +141,42 @@ async def login(credentials: UserLogin) -> TokenResponse:
     try:
         supabase = get_supabase_client()
         
-        # Authenticate user via Supabase Auth
+        # Step 1: Authenticate user via Supabase Auth with ANON_KEY
         try:
             auth_response = supabase.auth_client.auth.sign_in_with_password({
                 "email": credentials.email,
                 "password": credentials.password,
             })
             
-            user_id = auth_response.user.id
-            logger.info(f"User logged in: {user_id}")
+            auth_id = auth_response.user.id
+            logger.info(f"✓ User authenticated: {auth_id}")
             
         except Exception as e:
-            logger.warning(f"Failed login attempt for {credentials.email}")
+            logger.warning(f"✗ Failed login attempt for {credentials.email}: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
             )
         
-        # Get user profile
-        user_profile = supabase.get_user_by_id(user_id)
+        # Step 2: Get user profile by auth_id
+        user_profile = supabase.get_user_by_auth_id(auth_id)
         
         if not user_profile:
-            logger.error(f"User profile not found for authenticated user {user_id}")
+            logger.error(f"✗ User profile not found for authenticated user {auth_id}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="User profile not found"
             )
         
-        # Generate tokens
+        # Step 3: Generate JWT tokens
         tokens = create_tokens(
-            user_id=user_id,
+            user_id=auth_id,
             email=credentials.email,
             role=user_profile.get("role", "user"),
             full_name=user_profile.get("full_name")
         )
         
-        logger.info(f"Authentication successful for {credentials.email}")
+        logger.info(f"✓ Authentication successful for {credentials.email}")
         
         return TokenResponse(
             access_token=tokens["access_token"],
@@ -192,7 +184,7 @@ async def login(credentials: UserLogin) -> TokenResponse:
             token_type=tokens["token_type"],
             expires_in=tokens["expires_in"],
             user=UserResponse(
-                id=user_id,
+                id=auth_id,
                 email=credentials.email,
                 full_name=user_profile.get("full_name"),
                 avatar_url=user_profile.get("avatar_url"),
@@ -205,13 +197,13 @@ async def login(credentials: UserLogin) -> TokenResponse:
     except HTTPException:
         raise
     except DatabaseError as e:
-        logger.error(f"Database error during login: {str(e)}")
+        logger.error(f"✗ Database error during login: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database error occurred"
         )
     except Exception as e:
-        logger.error(f"Unexpected error during login: {str(e)}")
+        logger.error(f"✗ Unexpected error during login: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during authentication"

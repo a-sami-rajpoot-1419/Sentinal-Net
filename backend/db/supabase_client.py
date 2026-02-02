@@ -238,6 +238,14 @@ class SupabaseClient:
         except Exception as e:
             raise DatabaseError(f"Error fetching user {user_id}: {str(e)}")
     
+    def get_user_by_auth_id(self, auth_id: str) -> Optional[Dict[str, Any]]:
+        """Get user profile by auth_id (same as get_user_by_id but more explicit)"""
+        try:
+            response = self.client.table("users").select("*").eq("auth_id", auth_id).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            raise DatabaseError(f"Error fetching user by auth_id {auth_id}: {str(e)}")
+    
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user profile by email"""
         try:
@@ -248,17 +256,17 @@ class SupabaseClient:
     
     def create_user(
         self,
-        user_id: str,
+        auth_id: str,
         email: str,
         full_name: Optional[str] = None,
         avatar_url: Optional[str] = None,
         role: str = "user"
     ) -> Dict[str, Any]:
-        """Create a new user profile"""
+        """Create a new user profile with auth_id linking to Supabase auth.users"""
         from datetime import datetime
         try:
             user_data = {
-                "auth_id": user_id,
+                "auth_id": auth_id,
                 "email": email,
                 "full_name": full_name,
                 "avatar_url": avatar_url,
@@ -270,8 +278,10 @@ class SupabaseClient:
             }
             
             response = self.client.table("users").insert(user_data).execute()
+            logger.info(f"✓ User profile created in database: {email}")
             return response.data[0] if response.data else {}
         except Exception as e:
+            logger.error(f"✗ Error creating user profile {email}: {str(e)}")
             raise DatabaseError(f"Error creating user {email}: {str(e)}")
     
     def update_user(
