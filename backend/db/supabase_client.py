@@ -5,10 +5,13 @@ Supabase Database Client and Operations
 from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
 import os
+import logging
 from supabase import create_client, Client
 from backend.shared.exceptions_v2 import DatabaseError
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class SupabaseClient:
