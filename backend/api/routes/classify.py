@@ -11,9 +11,10 @@ from datetime import datetime
 import logging
 
 from backend.data.preprocessor import DataPreprocessor
-from backend.consensus.engine import ConsensusEngine, get_consensus_engine
+from backend.consensus.engine import ConsensusEngine
 from backend.shared.exceptions_v2 import ConsensusException
 from backend.database import get_db
+from backend.api.app import get_consensus_engine
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/classify", tags=["text-classification"])
