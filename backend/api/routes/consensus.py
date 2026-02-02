@@ -14,9 +14,6 @@ from backend.consensus.engine import ConsensusEngine, ConsensusResult
 from backend.shared.exceptions_v2 import ConsensusException
 from backend.database import get_db
 
-# Import the helper functions from app.py
-from backend.api.app import get_consensus_engine, get_agents
-
 router = APIRouter(prefix="/consensus", tags=["consensus"])
 
 
@@ -57,6 +54,9 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
         PredictionResponse with consensus result
     """
     try:
+        # Import inside function to avoid circular imports
+        from backend.api.app import get_consensus_engine
+        
         # Get consensus engine (initialized on startup)
         consensus_engine = get_consensus_engine()
         
@@ -105,6 +105,9 @@ async def batch_predict(request: BatchPredictionRequest) -> Dict[str, Any]:
         Dictionary with predictions, statistics, and consensus metrics
     """
     try:
+        # Import inside function to avoid circular imports
+        from backend.api.app import get_consensus_engine
+        
         # Get consensus engine (initialized on startup)
         consensus_engine = get_consensus_engine()
         
@@ -171,6 +174,9 @@ async def update_weights(request: WeightUpdateRequest) -> Dict[str, Any]:
     Returns:
         Dictionary with updated weights and reputation metrics
     """
+    # Import inside function to avoid circular imports
+    from backend.api.app import get_consensus_engine
+    
     consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
@@ -208,6 +214,7 @@ async def update_weights(request: WeightUpdateRequest) -> Dict[str, Any]:
 @router.get("/weights")
 async def get_weights() -> Dict[str, float]:
     """Get current agent weights"""
+    from backend.api.app import get_consensus_engine
     consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
@@ -218,6 +225,7 @@ async def get_weights() -> Dict[str, float]:
 @router.get("/reputations")
 async def get_reputations() -> Dict[str, Any]:
     """Get reputation statistics for all agents"""
+    from backend.api.app import get_consensus_engine
     consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
@@ -227,13 +235,13 @@ async def get_reputations() -> Dict[str, Any]:
 
 @router.get("/reputation/{agent_name}")
 async def get_agent_reputation(agent_name: str) -> Dict[str, Any]:
-    """Get reputation statistics for a specific agent"""
-    consensus_engine = get_consensus_engine()
-    if not consensus_engine:
-        raise HTTPException(status_code=503, detail="Consensus engine not initialized")
-    
+    """Get agent reputation stats."""
+    from backend.api.app import get_consensus_engine
+    ce = get_consensus_engine()
+    if not ce:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
     try:
-        return consensus_engine.get_agent_reputation(agent_name)
+        return ce.get_agent_reputation(agent_name)
     except ConsensusException as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -241,6 +249,7 @@ async def get_agent_reputation(agent_name: str) -> Dict[str, Any]:
 @router.post("/reset-weights")
 async def reset_weights() -> Dict[str, Any]:
     """Reset all agent weights to 1.0"""
+    from backend.api.app import get_consensus_engine
     consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")
@@ -259,6 +268,7 @@ async def reset_weights() -> Dict[str, Any]:
 @router.get("/prediction-history")
 async def get_prediction_history(limit: int = 100) -> List[Dict[str, Any]]:
     """Get recent prediction history"""
+    from backend.api.app import get_consensus_engine
     consensus_engine = get_consensus_engine()
     if not consensus_engine:
         raise HTTPException(status_code=503, detail="Consensus engine not initialized")

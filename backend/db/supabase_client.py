@@ -17,14 +17,21 @@ class SupabaseClient:
     def __init__(self):
         """Initialize Supabase client"""
         url = os.getenv("SUPABASE_PROJECT_URL")
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        anon_key = os.getenv("SUPABASE_ANON_KEY")
         
-        if not url or not key:
+        if not url or not service_key:
             raise DatabaseError(
                 "Missing SUPABASE_PROJECT_URL or SUPABASE_SERVICE_ROLE_KEY in .env"
             )
         
-        self.client: Client = create_client(url, key)
+        # Service role key for admin operations (consensus, user management)
+        self.client: Client = create_client(url, service_key)
+        
+        # Anon key for user auth operations (sign up, login)
+        if not anon_key:
+            raise DatabaseError("Missing SUPABASE_ANON_KEY in .env")
+        self.auth_client: Client = create_client(url, anon_key)
     
     def save_consensus_result(
         self,
@@ -224,9 +231,9 @@ class SupabaseClient:
     # ==================== User Management ====================
     
     def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get user profile by ID"""
+        """Get user profile by auth ID"""
         try:
-            response = self.client.table("users").select("*").eq("id", user_id).execute()
+            response = self.client.table("users").select("*").eq("auth_id", user_id).execute()
             return response.data[0] if response.data else None
         except Exception as e:
             raise DatabaseError(f"Error fetching user {user_id}: {str(e)}")
@@ -251,11 +258,13 @@ class SupabaseClient:
         from datetime import datetime
         try:
             user_data = {
-                "id": user_id,
+                "auth_id": user_id,
                 "email": email,
                 "full_name": full_name,
                 "avatar_url": avatar_url,
                 "role": role,
+                "is_active": True,
+                "email_verified": False,
                 "created_at": datetime.utcnow().isoformat(),
                 "updated_at": datetime.utcnow().isoformat()
             }

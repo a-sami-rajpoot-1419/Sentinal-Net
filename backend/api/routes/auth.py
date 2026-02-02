@@ -50,7 +50,7 @@ async def register(user_data: UserCreate) -> TokenResponse:
         
         # Create auth user via Supabase Auth
         try:
-            auth_response = supabase.client.auth.sign_up({
+            auth_response = supabase.auth_client.auth.sign_up({
                 "email": user_data.email,
                 "password": user_data.password,
             })
@@ -140,7 +140,7 @@ async def login(credentials: UserLogin) -> TokenResponse:
         
         # Authenticate user via Supabase Auth
         try:
-            auth_response = supabase.client.auth.sign_in_with_password({
+            auth_response = supabase.auth_client.auth.sign_in_with_password({
                 "email": credentials.email,
                 "password": credentials.password,
             })

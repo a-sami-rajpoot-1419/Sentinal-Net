@@ -14,7 +14,6 @@ from backend.data.preprocessor import DataPreprocessor
 from backend.consensus.engine import ConsensusEngine
 from backend.shared.exceptions_v2 import ConsensusException
 from backend.database import get_db
-from backend.api.app import get_consensus_engine
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/classify", tags=["text-classification"])
@@ -58,11 +57,14 @@ async def classify_text(
         ClassifyResponse with consensus classification
     """
     try:
+        # Import inside function to avoid circular imports
+        from backend.api.app import get_consensus_engine, get_preprocessor
+        
         # Generate prediction ID
         prediction_id = str(uuid.uuid4())
         
-        # Initialize preprocessor and consensus engine
-        preprocessor = DataPreprocessor()
+        # Get global preprocessor and consensus engine (both initialized at startup)
+        preprocessor = get_preprocessor()
         consensus_engine = get_consensus_engine()
         
         if not consensus_engine:

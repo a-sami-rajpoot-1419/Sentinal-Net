@@ -14,6 +14,7 @@ from backend.db.migrations import (
     CREATE_VOTES_TABLE,
     CREATE_AGENTS_TABLE,
     CREATE_EXPERIMENTS_TABLE,
+    CREATE_USERS_TABLE,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ class DatabaseInitializer:
         ("votes", CREATE_VOTES_TABLE),
         ("agents", CREATE_AGENTS_TABLE),
         ("experiments", CREATE_EXPERIMENTS_TABLE),
+        ("users", CREATE_USERS_TABLE),
     ]
     
     # RLS enablement statements
@@ -36,6 +38,7 @@ class DatabaseInitializer:
         "votes": "ALTER TABLE public.votes ENABLE ROW LEVEL SECURITY;",
         "agents": "ALTER TABLE public.agents ENABLE ROW LEVEL SECURITY;",
         "experiments": "ALTER TABLE public.experiments ENABLE ROW LEVEL SECURITY;",
+        "users": "ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;",
     }
     
     # RLS policy statements (simplified - adjust per auth setup)

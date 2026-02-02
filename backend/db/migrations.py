@@ -99,6 +99,29 @@ CREATE INDEX IF NOT EXISTS idx_experiments_created_at ON public.experiments(crea
 CREATE INDEX IF NOT EXISTS idx_experiments_dataset ON public.experiments(dataset_name);
 """
 
+# ==================== USERS TABLE ====================
+CREATE_USERS_TABLE = """
+CREATE TABLE IF NOT EXISTS public.users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auth_id UUID NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
+    full_name TEXT,
+    avatar_url TEXT,
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'moderator')),
+    is_active BOOLEAN DEFAULT true,
+    email_verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
+CREATE INDEX IF NOT EXISTS idx_users_auth_id ON public.users(auth_id);
+CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON public.users(created_at DESC);
+"""
+
+
 # ==================== RLS POLICIES ====================
 # Note: RLS policies depend on your auth setup (users table)
 # Adjust user_id references to match your actual user_id column

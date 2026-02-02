@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import os
 import logging
 from typing import AsyncGenerator
+from pathlib import Path
 
 from backend.security.rate_limiter import (
     RateLimitMiddleware,
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 # Global instances - will be populated on startup
 consensus_engine: ConsensusEngine = None
 agents_dict: dict = None
+preprocessor = None  # Fitted data preprocessor
 
 
 @asynccontextmanager
@@ -73,12 +75,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         
         # Initialize consensus engine
         logger.info("🧠 Initializing consensus engine...")
-        global consensus_engine, agents_dict
+        global consensus_engine, agents_dict, preprocessor
         consensus_engine = ConsensusEngine(agents=agents)
         agents_dict = agents
         logger.info(f"✓ Consensus engine initialized")
         logger.info(f"  - Agents: {list(agents.keys())}")
         logger.info(f"  - Weights: {consensus_engine.get_weights()}")
+        
+        # Initialize preprocessor with feature names from cached training data
+        logger.info("📝 Initializing text preprocessor...")
+        from backend.data.preprocessor import DataPreprocessor
+        import pandas as pd
+        import numpy as np
+        
+        try:
+            # Create preprocessor instance
+            preprocessor = DataPreprocessor()
+            
+            # Load raw texts for fitting the TF-IDF vectorizer
+            raw_data_path = Path("data/raw/spam.csv")
+            if raw_data_path.exists():
+                # Load raw texts from CSV with proper encoding and parsing
+                df = pd.read_csv(raw_data_path, encoding='latin-1', on_bad_lines='skip')
+                # First column is label, second is text
+                raw_texts = df.iloc[:, 1].values  # SMS column
+                # Remove NaN/None values and convert to string
+                raw_texts = [str(t).strip() for t in raw_texts if pd.notna(t) and str(t).strip() and str(t).strip().lower() != 'nan']
+                
+                # Fit the preprocessor on raw texts - this initializes the TF-IDF vectorizer properly
+                logger.info(f"Fitting preprocessor on {len(raw_texts)} raw texts...")
+                preprocessor.fit_transform(raw_texts)
+                logger.info(f"✓ Preprocessor fitted with vocabulary ({len(preprocessor.feature_names)} features)")
+            else:
+                logger.warning(f"⚠ Raw data file not found: {raw_data_path}")
+                
+        except Exception as e:
+            logger.error(f"⚠ Failed to initialize preprocessor: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            logger.warning("⚠ Preprocessor will be unfit - text classification may fail")
+            preprocessor = DataPreprocessor()
         
         logger.info("✓ Sentinel-Net ready!")
         
@@ -204,6 +240,28 @@ def get_agents() -> dict:
     return agents_dict
 
 
+def get_preprocessor():
+    """
+    Get the fitted data preprocessor instance.
+    
+    Call this in route handlers to access the preprocessor.
+    The preprocessor is initialized on app startup with vocabulary
+    from the trained agents.
+    
+    Returns:
+        DataPreprocessor: The initialized and fitted preprocessor
+        
+    Raises:
+        RuntimeError: If preprocessor not initialized
+    """
+    if preprocessor is None:
+        raise RuntimeError(
+            "Preprocessor not initialized. "
+            "Make sure the app has started successfully."
+        )
+    return preprocessor
+
+
 @app.get("/health")
 async def health_check():
     """
@@ -299,3 +357,10 @@ async def get_security_stats():
         }
     }
 
+
+# ==================== INCLUDE ROUTES ====================
+# Import and include routes AFTER all functions are defined to avoid circular imports
+# Routes: auth, consensus, agents, classify
+# Force reload after fixing consensus.py line 238
+from backend.api.routes import include_routes
+include_routes(app)
