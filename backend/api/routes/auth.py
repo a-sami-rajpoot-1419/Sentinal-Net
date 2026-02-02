@@ -8,6 +8,9 @@ from fastapi.responses import JSONResponse
 from typing import Dict, Any, Optional
 import logging
 from datetime import datetime
+import requests
+import os
+import uuid
 
 from backend.db.models import (
     UserCreate, UserLogin, UserResponse, TokenResponse,
@@ -60,18 +63,54 @@ async def register(user_data: UserCreate) -> TokenResponse:
                 detail="Error checking email availability"
             )
         
-        # Step 2: Create auth user via Supabase Auth with ANON_KEY
+        # Step 2: Create auth user via Supabase Auth REST API
         try:
-            auth_response = supabase.auth_client.auth.sign_up({
-                "email": user_data.email,
-                "password": user_data.password,
-            })
+            supabase_url = os.getenv("SUPABASE_PROJECT_URL")
+            anon_key = os.getenv("SUPABASE_ANON_KEY")
             
-            auth_id = auth_response.user.id
+            auth_url = f"{supabase_url}/auth/v1/signup"
+            headers = {
+                "Content-Type": "application/json",
+                "apikey": anon_key
+            }
+            
+            payload = {
+                "email": user_data.email,
+                "password": user_data.password
+            }
+            
+            auth_response = requests.post(auth_url, json=payload, headers=headers, timeout=10)
+            
+            if auth_response.status_code not in [200, 201]:
+                error_detail = auth_response.json().get("msg", "Failed to create auth user")
+                logger.error(f"✗ Supabase auth error ({auth_response.status_code}): {error_detail}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to create user account: {error_detail}"
+                )
+            
+            auth_data = auth_response.json()
+            auth_id = auth_data.get("user", {}).get("id")
+            
+            if not auth_id:
+                logger.error("✗ No user ID returned from Supabase auth")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to retrieve user ID from auth service"
+                )
+            
             logger.info(f"✓ Auth user created with ID: {auth_id}")
             
-        except Exception as e:
+        except HTTPException:
+            raise
+        except requests.exceptions.RequestException as e:
             logger.error(f"✗ Error creating auth user: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Auth service unavailable"
+            )
+        except Exception as e:
+            logger.error(f"✗ Unexpected error creating auth user: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to create user account"
