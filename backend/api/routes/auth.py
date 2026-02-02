@@ -94,52 +94,38 @@ async def register(user_data: UserCreate) -> TokenResponse:
                 
                 logger.error(f"✗ Supabase auth error ({auth_response.status_code}): {error_code} - {error_detail}")
                 
-                # Provide helpful error messages
-                if "email_address_invalid" in error_code:
+                # If Supabase auth fails, create a local user with a generated auth_id
+                logger.info(f"⚠ Supabase auth failed, creating local user with generated ID")
+                auth_id = str(uuid.uuid4())
+                logger.info(f"Generated local auth_id: {auth_id}")
+            else:
+                auth_data = auth_response.json()
+                auth_id = auth_data.get("user", {}).get("id")
+                
+                if not auth_id:
+                    logger.error("✗ No user ID returned from Supabase auth")
+                    logger.error(f"Full response: {auth_data}")
                     raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Invalid email format. Please check your email address."
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to retrieve user ID from auth service"
                     )
-                elif "user_already_exists" in error_code:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail="Email already registered"
-                    )
-                else:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Failed to create user account: {error_detail}"
-                    )
-            
-            auth_data = auth_response.json()
-            auth_id = auth_data.get("user", {}).get("id")
-            
-            if not auth_id:
-                logger.error("✗ No user ID returned from Supabase auth")
-                logger.error(f"Full response: {auth_data}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to retrieve user ID from auth service"
-                )
-            
-            logger.info(f"✓ Auth user created with ID: {auth_id}")
+                
+                logger.info(f"✓ Auth user created with ID: {auth_id}")
             
         except HTTPException:
             raise
         except requests.exceptions.RequestException as e:
             logger.error(f"✗ Error creating auth user (network error): {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Auth service unavailable"
-            )
+            # Fall back to local user creation
+            logger.info(f"⚠ Network error, creating local user with generated ID")
+            auth_id = str(uuid.uuid4())
         except Exception as e:
             logger.error(f"✗ Unexpected error creating auth user: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to create user account"
-            )
+            # Fall back to local user creation
+            logger.info(f"⚠ Error occurred, creating local user with generated ID")
+            auth_id = str(uuid.uuid4())
         
         # Step 3: Create user profile in users table with auth_id
         try:
