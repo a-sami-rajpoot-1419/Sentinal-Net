@@ -275,3 +275,66 @@ async def get_prediction_history(limit: int = 100) -> List[Dict[str, Any]]:
     
     history = consensus_engine.get_prediction_history()
     return history[-limit:]
+
+
+@router.get("/logs")
+async def get_consensus_logs(limit: int = 50) -> Dict[str, Any]:
+    """
+    Get recent consensus prediction logs directly from database
+    
+    Args:
+        limit: Number of recent logs to retrieve (default 50)
+    
+    Returns:
+        Dictionary with recent consensus prediction logs
+    """
+    try:
+        from backend.database import get_db
+        db = get_db()
+        
+        # Get recent consensus results from database
+        results = db.get_recent_consensus_results(limit=limit)
+        
+        return {
+            "total_logs": len(results),
+            "logs": results,
+            "timestamp": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving consensus logs: {str(e)}")
+
+
+@router.get("/weights/history")
+async def get_weights_history(limit: int = 100) -> Dict[str, Any]:
+    """
+    Get weight update history directly from database
+    Shows how agent weights have evolved
+    
+    Args:
+        limit: Number of recent weight updates to retrieve
+    
+    Returns:
+        Dictionary with weight update history organized by agent
+    """
+    try:
+        from backend.database import get_db
+        db = get_db()
+        
+        # Get recent weight updates
+        updates = db.get_recent_weight_updates(limit=limit)
+        
+        # Organize by agent
+        by_agent = {}
+        for update in updates:
+            agent_name = update.get("agent_name")
+            if agent_name not in by_agent:
+                by_agent[agent_name] = []
+            by_agent[agent_name].append(update)
+        
+        return {
+            "total_updates": len(updates),
+            "by_agent": by_agent,
+            "timestamp": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving weight history: {str(e)}")

@@ -481,6 +481,50 @@ class SupabaseClient:
             return False
         except Exception as e:
             raise DatabaseError(f"Error checking user existence {email}: {str(e)}")
+    
+    def get_recent_consensus_results(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get recent consensus prediction logs from database"""
+        try:
+            response = requests.get(
+                f"{self.url}/rest/v1/consensus_results?order=created_at.desc&limit={limit}&select=*",
+                headers=self.admin_headers,
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                return []
+            
+            results = response.json() if response.json() else []
+            # Reverse to get chronological order (oldest first in list, newest last)
+            return list(reversed(results))
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error retrieving consensus results: {str(e)}")
+            return []
+        except Exception as e:
+            logger.error(f"Error retrieving consensus results: {str(e)}")
+            return []
+    
+    def get_recent_weight_updates(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get recent weight update history from database"""
+        try:
+            response = requests.get(
+                f"{self.url}/rest/v1/weight_updates?order=created_at.desc&limit={limit}&select=*",
+                headers=self.admin_headers,
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                return []
+            
+            results = response.json() if response.json() else []
+            # Reverse to get chronological order
+            return list(reversed(results))
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error retrieving weight updates: {str(e)}")
+            return []
+        except Exception as e:
+            logger.error(f"Error retrieving weight updates: {str(e)}")
+            return []
 
 
 # Singleton instance

@@ -50,6 +50,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
                   Agents
                 </Link>
                 <Link
+                  href="/docs"
+                  className="text-sm text-gray-300 hover:text-white transition-smooth"
+                >
+                  📚 Docs
+                </Link>
+                <Link
                   href="/settings"
                   className="text-sm text-gray-300 hover:text-white transition-smooth"
                 >
