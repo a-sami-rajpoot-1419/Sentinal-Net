@@ -9,10 +9,13 @@ from pydantic import BaseModel, Field
 from typing import Dict, List, Any
 import numpy as np
 import uuid
+import logging
 from datetime import datetime
 from backend.consensus.engine import ConsensusEngine, ConsensusResult
 from backend.shared.exceptions_v2 import ConsensusException
 from backend.database import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/consensus", tags=["consensus"])
 
@@ -290,7 +293,9 @@ async def get_consensus_logs(limit: int = 50) -> Dict[str, Any]:
     """
     try:
         from backend.database import get_db
-        db = get_db()
+        from backend.db.supabase_client import get_supabase_client
+        
+        db = get_supabase_client()
         
         # Get recent consensus results from database
         results = db.get_recent_consensus_results(limit=limit)
@@ -301,6 +306,7 @@ async def get_consensus_logs(limit: int = 50) -> Dict[str, Any]:
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
+        logger.error(f"Error retrieving consensus logs: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving consensus logs: {str(e)}")
 
 
@@ -317,8 +323,9 @@ async def get_weights_history(limit: int = 100) -> Dict[str, Any]:
         Dictionary with weight update history organized by agent
     """
     try:
-        from backend.database import get_db
-        db = get_db()
+        from backend.db.supabase_client import get_supabase_client
+        
+        db = get_supabase_client()
         
         # Get recent weight updates
         updates = db.get_recent_weight_updates(limit=limit)
@@ -337,4 +344,5 @@ async def get_weights_history(limit: int = 100) -> Dict[str, Any]:
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
+        logger.error(f"Error retrieving weight history: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving weight history: {str(e)}")
