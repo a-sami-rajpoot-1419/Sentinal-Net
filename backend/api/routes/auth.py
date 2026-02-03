@@ -203,18 +203,65 @@ async def login(credentials: UserLogin) -> TokenResponse:
     try:
         supabase = get_supabase_client()
         
-        # Step 1: Authenticate user via Supabase Auth with ANON_KEY
+        # Step 1: Authenticate user via Supabase Auth REST API
         try:
-            auth_response = supabase.auth_client.auth.sign_in_with_password({
-                "email": credentials.email,
-                "password": credentials.password,
-            })
+            supabase_url = os.getenv("SUPABASE_PROJECT_URL")
+            anon_key = os.getenv("SUPABASE_ANON_KEY")
             
-            auth_id = auth_response.user.id
+            auth_url = f"{supabase_url}/auth/v1/token?grant_type=password"
+            headers = {
+                "Content-Type": "application/json",
+                "apikey": anon_key
+            }
+            
+            payload = {
+                "email": credentials.email,
+                "password": credentials.password
+            }
+            
+            logger.info(f"Attempting login for {credentials.email}")
+            logger.info(f"Auth endpoint: {auth_url}")
+            
+            auth_response = requests.post(auth_url, json=payload, headers=headers, timeout=10)
+            
+            logger.info(f"Supabase auth response status: {auth_response.status_code}")
+            logger.info(f"Supabase auth response body: {auth_response.text[:500]}")
+            
+            if auth_response.status_code not in [200, 201]:
+                try:
+                    error_data = auth_response.json()
+                    error_detail = error_data.get("error_description", error_data.get("error", "Invalid credentials"))
+                except:
+                    error_detail = auth_response.text
+                logger.warning(f"✗ Failed login attempt for {credentials.email}: {error_detail}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid email or password"
+                )
+            
+            auth_data = auth_response.json()
+            auth_id = auth_data.get("user", {}).get("id")
+            
+            if not auth_id:
+                logger.error(f"✗ No user ID returned from Supabase auth for {credentials.email}")
+                logger.error(f"Auth response: {auth_data}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid email or password"
+                )
+            
             logger.info(f"✓ User authenticated: {auth_id}")
             
+        except requests.exceptions.RequestException as e:
+            logger.error(f"✗ Network error during login: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Authentication service error"
+            )
+        except HTTPException:
+            raise
         except Exception as e:
-            logger.warning(f"✗ Failed login attempt for {credentials.email}: {str(e)}")
+            logger.error(f"✗ Unexpected error during auth: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
