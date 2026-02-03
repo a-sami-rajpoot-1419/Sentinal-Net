@@ -1,12 +1,14 @@
 """
 Supabase Database Client and Operations
+Uses HTTP REST API for reliable connectivity
 """
 
 from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
 import os
 import logging
-from supabase import create_client, Client
+import requests
+import json
 from backend.shared.exceptions_v2 import DatabaseError
 
 load_dotenv()
@@ -15,26 +17,35 @@ logger = logging.getLogger(__name__)
 
 
 class SupabaseClient:
-    """Wrapper around Supabase client for consensus data"""
+    """Wrapper around Supabase HTTP REST API for consensus data"""
     
     def __init__(self):
-        """Initialize Supabase client"""
-        url = os.getenv("SUPABASE_PROJECT_URL")
-        service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        anon_key = os.getenv("SUPABASE_ANON_KEY")
+        """Initialize Supabase HTTP client"""
+        self.url = os.getenv("SUPABASE_PROJECT_URL")
+        self.service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        self.anon_key = os.getenv("SUPABASE_ANON_KEY")
         
-        if not url or not service_key:
+        if not self.url or not self.service_key:
             raise DatabaseError(
                 "Missing SUPABASE_PROJECT_URL or SUPABASE_SERVICE_ROLE_KEY in .env"
             )
         
-        # Service role key for admin operations (consensus, user management)
-        self.client: Client = create_client(url, service_key)
-        
-        # Anon key for user auth operations (sign up, login)
-        if not anon_key:
+        if not self.anon_key:
             raise DatabaseError("Missing SUPABASE_ANON_KEY in .env")
-        self.auth_client: Client = create_client(url, anon_key)
+        
+        # Service role headers for admin operations
+        self.admin_headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.service_key}",
+            "apikey": self.service_key
+        }
+        
+        # Anon headers for user auth operations
+        self.anon_headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.anon_key}",
+            "apikey": self.anon_key
+        }
     
     def save_consensus_result(
         self,
@@ -60,17 +71,29 @@ class SupabaseClient:
             Inserted record from database
         """
         try:
-            response = self.client.table("consensus_results").insert({
+            data = {
                 "session_id": session_id,
                 "sample_id": sample_id,
                 "predicted_class": predicted_class,
                 "confidence": float(confidence),
                 "agent_predictions": agent_predictions,
                 "agent_weights": weights,
-            }).execute()
+            }
             
-            return response.data[0] if response.data else {}
+            response = requests.post(
+                f"{self.url}/rest/v1/consensus_results",
+                headers=self.admin_headers,
+                json=data,
+                timeout=10
+            )
+            
+            if response.status_code not in [200, 201]:
+                raise DatabaseError(f"Failed to save consensus result: {response.text}")
+            
+            return response.json()[0] if response.json() else {}
         
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error saving consensus result (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error saving consensus result: {str(e)}")
     
@@ -100,7 +123,7 @@ class SupabaseClient:
             Inserted record from database
         """
         try:
-            response = self.client.table("weight_updates").insert({
+            data = {
                 "session_id": session_id,
                 "agent_name": agent_name,
                 "previous_weight": float(previous_weight),
@@ -108,24 +131,41 @@ class SupabaseClient:
                 "reason": reason,
                 "true_label": true_label,
                 "predicted_label": predicted_label,
-            }).execute()
+            }
             
-            return response.data[0] if response.data else {}
+            response = requests.post(
+                f"{self.url}/rest/v1/weight_updates",
+                headers=self.admin_headers,
+                json=data,
+                timeout=10
+            )
+            
+            if response.status_code not in [200, 201]:
+                raise DatabaseError(f"Failed to save weight update: {response.text}")
+            
+            return response.json()[0] if response.json() else {}
         
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error saving weight update (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error saving weight update: {str(e)}")
     
     def get_session_results(self, session_id: str) -> List[Dict[str, Any]]:
         """Get all consensus results for a session"""
         try:
-            response = self.client.table("consensus_results").select(
-                "*"
-            ).eq(
-                "session_id", session_id
-            ).execute()
+            response = requests.get(
+                f"{self.url}/rest/v1/consensus_results?session_id=eq.{session_id}&select=*",
+                headers=self.admin_headers,
+                timeout=10
+            )
             
-            return response.data if response.data else []
+            if response.status_code != 200:
+                return []
+            
+            return response.json() if response.json() else []
         
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error retrieving session results (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error retrieving session results: {str(e)}")
     
@@ -136,18 +176,19 @@ class SupabaseClient:
     ) -> List[Dict[str, Any]]:
         """Get weight update history for an agent in a session"""
         try:
-            response = self.client.table("weight_updates").select(
-                "*"
-            ).eq(
-                "session_id", session_id
-            ).eq(
-                "agent_name", agent_name
-            ).order(
-                "created_at", desc=False
-            ).execute()
+            response = requests.get(
+                f"{self.url}/rest/v1/weight_updates?session_id=eq.{session_id}&agent_name=eq.{agent_name}&order=created_at.asc&select=*",
+                headers=self.admin_headers,
+                timeout=10
+            )
             
-            return response.data if response.data else []
+            if response.status_code != 200:
+                return []
+            
+            return response.json() if response.json() else []
         
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error retrieving weight history (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error retrieving weight history: {str(e)}")
     
@@ -159,15 +200,13 @@ class SupabaseClient:
         """Get aggregated performance metrics for an agent"""
         try:
             # Get all predictions for this agent
-            response = self.client.table("weight_updates").select(
-                "*"
-            ).eq(
-                "agent_name", agent_name
-            ).limit(
-                limit
-            ).execute()
+            response = requests.get(
+                f"{self.url}/rest/v1/weight_updates?agent_name=eq.{agent_name}&select=*&limit={limit}",
+                headers=self.admin_headers,
+                timeout=10
+            )
             
-            if not response.data:
+            if response.status_code != 200:
                 return {
                     "agent_name": agent_name,
                     "total_predictions": 0,
@@ -175,7 +214,15 @@ class SupabaseClient:
                     "accuracy": 0.0,
                 }
             
-            data = response.data
+            data = response.json()
+            if not data:
+                return {
+                    "agent_name": agent_name,
+                    "total_predictions": 0,
+                    "correct_predictions": 0,
+                    "accuracy": 0.0,
+                }
+            
             correct = sum(1 for d in data if d.get("predicted_label") == d.get("true_label"))
             
             return {
@@ -185,49 +232,72 @@ class SupabaseClient:
                 "accuracy": correct / len(data) if data else 0.0,
             }
         
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error retrieving agent performance (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error retrieving agent performance: {str(e)}")
     
     def create_session(self, session_name: str, description: str = "") -> Dict[str, Any]:
         """Create a new consensus session"""
         try:
-            response = self.client.table("sessions").insert({
+            data = {
                 "session_name": session_name,
                 "description": description,
-            }).execute()
+            }
             
-            return response.data[0] if response.data else {}
+            response = requests.post(
+                f"{self.url}/rest/v1/sessions",
+                headers=self.admin_headers,
+                json=data,
+                timeout=10
+            )
+            
+            if response.status_code not in [200, 201]:
+                raise DatabaseError(f"Failed to create session: {response.text}")
+            
+            return response.json()[0] if response.json() else {}
         
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error creating session (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error creating session: {str(e)}")
     
     def get_session(self, session_id: str) -> Dict[str, Any]:
         """Get session details"""
         try:
-            response = self.client.table("sessions").select(
-                "*"
-            ).eq(
-                "id", session_id
-            ).execute()
+            response = requests.get(
+                f"{self.url}/rest/v1/sessions?id=eq.{session_id}&select=*",
+                headers=self.admin_headers,
+                timeout=10
+            )
             
-            return response.data[0] if response.data else {}
+            if response.status_code != 200:
+                return {}
+            
+            data = response.json()
+            return data[0] if data else {}
         
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error retrieving session (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error retrieving session: {str(e)}")
     
     def list_sessions(self, limit: int = 50) -> List[Dict[str, Any]]:
         """List recent sessions"""
         try:
-            response = self.client.table("sessions").select(
-                "*"
-            ).order(
-                "created_at", desc=True
-            ).limit(
-                limit
-            ).execute()
+            response = requests.get(
+                f"{self.url}/rest/v1/sessions?select=*&order=created_at.desc&limit={limit}",
+                headers=self.admin_headers,
+                timeout=10
+            )
             
-            return response.data if response.data else []
+            if response.status_code != 200:
+                return []
+            
+            return response.json() if response.json() else []
         
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error listing sessions (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error listing sessions: {str(e)}")
     
@@ -236,24 +306,38 @@ class SupabaseClient:
     def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user profile by auth ID"""
         try:
-            response = self.client.table("users").select("*").eq("auth_id", user_id).execute()
-            return response.data[0] if response.data else None
+            response = requests.get(
+                f"{self.url}/rest/v1/users?auth_id=eq.{user_id}&select=*",
+                headers=self.admin_headers,
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                return None
+            
+            data = response.json()
+            return data[0] if data else None
         except Exception as e:
             raise DatabaseError(f"Error fetching user {user_id}: {str(e)}")
     
     def get_user_by_auth_id(self, auth_id: str) -> Optional[Dict[str, Any]]:
         """Get user profile by auth_id (same as get_user_by_id but more explicit)"""
-        try:
-            response = self.client.table("users").select("*").eq("auth_id", auth_id).execute()
-            return response.data[0] if response.data else None
-        except Exception as e:
-            raise DatabaseError(f"Error fetching user by auth_id {auth_id}: {str(e)}")
+        return self.get_user_by_id(auth_id)
     
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user profile by email"""
         try:
-            response = self.client.table("users").select("*").eq("email", email).execute()
-            return response.data[0] if response.data else None
+            response = requests.get(
+                f"{self.url}/rest/v1/users?email=eq.{email}&select=*",
+                headers=self.admin_headers,
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                return None
+            
+            data = response.json()
+            return data[0] if data else None
         except Exception as e:
             raise DatabaseError(f"Error fetching user by email {email}: {str(e)}")
     
@@ -280,9 +364,32 @@ class SupabaseClient:
                 "updated_at": datetime.utcnow().isoformat()
             }
             
-            response = self.client.table("users").insert(user_data).execute()
+            response = requests.post(
+                f"{self.url}/rest/v1/users",
+                headers=self.admin_headers,
+                json=user_data,
+                timeout=10
+            )
+            
+            if response.status_code not in [200, 201]:
+                logger.error(f"✗ Error creating user profile {email}: Status {response.status_code}, Body: {response.text}")
+                raise DatabaseError(f"Failed to create user: {response.text}")
+            
             logger.info(f"✓ User profile created in database: {email}")
-            return response.data[0] if response.data else {}
+            
+            # Handle empty response
+            if not response.text:
+                return {"auth_id": auth_id, "email": email}
+            
+            try:
+                json_data = response.json()
+                return json_data[0] if isinstance(json_data, list) and json_data else json_data if json_data else {"auth_id": auth_id, "email": email}
+            except:
+                return {"auth_id": auth_id, "email": email}
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"✗ Error creating user profile {email} (network): {str(e)}")
+            raise DatabaseError(f"Error creating user {email}: {str(e)}")
         except Exception as e:
             logger.error(f"✗ Error creating user profile {email}: {str(e)}")
             raise DatabaseError(f"Error creating user {email}: {str(e)}")
@@ -304,32 +411,74 @@ class SupabaseClient:
             if avatar_url is not None:
                 update_data["avatar_url"] = avatar_url
             
-            response = self.client.table("users").update(update_data).eq("id", user_id).execute()
-            return response.data[0] if response.data else {}
+            response = requests.patch(
+                f"{self.url}/rest/v1/users?id=eq.{user_id}",
+                headers=self.admin_headers,
+                json=update_data,
+                timeout=10
+            )
+            
+            if response.status_code not in [200, 201]:
+                raise DatabaseError(f"Failed to update user: {response.text}")
+            
+            return response.json()[0] if response.json() else {}
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error updating user {user_id} (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error updating user {user_id}: {str(e)}")
     
     def delete_user(self, user_id: str) -> bool:
         """Delete user profile"""
         try:
-            self.client.table("users").delete().eq("id", user_id).execute()
+            response = requests.delete(
+                f"{self.url}/rest/v1/users?id=eq.{user_id}",
+                headers=self.admin_headers,
+                timeout=10
+            )
+            
+            if response.status_code not in [200, 204]:
+                raise DatabaseError(f"Failed to delete user: {response.text}")
+            
             return True
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error deleting user {user_id} (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error deleting user {user_id}: {str(e)}")
     
     def list_users(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         """List all users with pagination"""
         try:
-            response = self.client.table("users").select("*").range(offset, offset + limit - 1).execute()
-            return response.data if response.data else []
+            response = requests.get(
+                f"{self.url}/rest/v1/users?select=*&limit={limit}&offset={offset}",
+                headers=self.admin_headers,
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                return []
+            
+            return response.json() if response.json() else []
+        except requests.exceptions.RequestException as e:
+            raise DatabaseError(f"Error listing users (network): {str(e)}")
         except Exception as e:
             raise DatabaseError(f"Error listing users: {str(e)}")
     
     def user_exists(self, email: str) -> bool:
         """Check if user exists by email"""
         try:
-            response = self.client.table("users").select("id").eq("email", email).execute()
-            return response.data and len(response.data) > 0
+            response = requests.get(
+                f"{self.url}/rest/v1/users?email=eq.{email}&select=id",
+                headers=self.admin_headers,
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                return False
+            
+            data = response.json()
+            return bool(data) and len(data) > 0
+        except requests.exceptions.RequestException:
+            return False
         except Exception as e:
             raise DatabaseError(f"Error checking user existence {email}: {str(e)}")
 
