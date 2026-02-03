@@ -1,6 +1,7 @@
 # Quick Start - Registration & Login Testing
 
 ## Setup (One-Time)
+
 ```bash
 cd c:\Sami\Sentinal-net
 
@@ -12,6 +13,7 @@ cd c:\Sami\Sentinal-net
 ```
 
 ## Step 1: Start Backend (Terminal 1)
+
 ```bash
 cd c:\Sami\Sentinal-net
 $env:API_ENV='production'
@@ -19,6 +21,7 @@ $env:API_ENV='production'
 ```
 
 **Expected Output:**
+
 ```
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ...
@@ -27,12 +30,14 @@ INFO:backend.api.app:🎯 Application is fully initialized and ready to serve re
 ```
 
 ## Step 2: Test Registration (Terminal 2 - NEW Terminal!)
+
 ```bash
 cd c:\Sami\Sentinal-net
 .venv\Scripts\python test_full_registration.py
 ```
 
 **Expected Output:**
+
 ```
 ✓ Backend is running
 ✓ Registration successful!
@@ -47,6 +52,7 @@ cd c:\Sami\Sentinal-net
 ## Manual Testing with curl (Optional)
 
 ### Register
+
 ```bash
 curl -X POST http://localhost:8000/auth/register `
   -H "Content-Type: application/json" `
@@ -58,6 +64,7 @@ curl -X POST http://localhost:8000/auth/register `
 ```
 
 ### Login
+
 ```bash
 curl -X POST http://localhost:8000/auth/login `
   -H "Content-Type: application/json" `
@@ -70,16 +77,19 @@ curl -X POST http://localhost:8000/auth/login `
 ## Troubleshooting
 
 ### Backend Crashes on Startup
+
 ✗ Old Issue: Now FIXED with HTTP REST API
 ✓ Check logs for specific error messages
 ✓ Verify .env file exists and has correct API keys
 
 ### Registration Returns 500 Error
+
 - Check backend logs for error details
 - Verify backend is running (`curl http://localhost:8000/agents/list`)
 - Check .env file doesn't have inline comments after API keys
 
 ### HTTP Connection Fails
+
 ```bash
 # Test Supabase connectivity
 .venv\Scripts\python -c "
@@ -96,6 +106,7 @@ print(f'Status: {response.status_code}')
 ```
 
 ### User Not Created in Database
+
 1. Check HTTP response status code (should be 200 or 201)
 2. Verify admin headers are correct (service role key)
 3. Check users table exists in Supabase
@@ -119,5 +130,6 @@ print(f'Status: {response.status_code}')
 - **Connection Type**: HTTP REST (no SDK, no connection pool needed)
 
 ---
+
 **Status**: ✓ HTTP REST API connection verified and working
 **Date**: Feb 3, 2026
